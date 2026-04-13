@@ -25,6 +25,9 @@ importers:
       '@fontsource/geist-mono':
         specifier: ^5.2.7
         version: 5.2.7
+      '@openbeam/streams':
+        specifier: workspace:*
+        version: link:../../packages/streams
       '@tailwindcss/vite':
         specifier: ^4.2.1
         version: 4.2.2(vite@7.3.2(@types/node@24.12.2)(jiti@2.6.1)(lightningcss@1.32.0))
@@ -58,6 +61,9 @@ importers:
       react-joyride:
         specifier: ^3.0.2
         version: 3.0.2(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      rxjs:
+        specifier: ^7.8.2
+        version: 7.8.2
       shadcn:
         specifier: ^4.1.1
         version: 4.2.0(@types/node@24.12.2)(typescript@5.9.3)
@@ -125,6 +131,19 @@ importers:
       vite:
         specifier: ^7.3.1
         version: 7.3.2(@types/node@24.12.2)(jiti@2.6.1)(lightningcss@1.32.0)
+      vitest:
+        specifier: ^4.1.0
+        version: 4.1.4(@types/node@24.12.2)(jsdom@26.1.0(canvas@3.2.3))(msw@2.13.2(@types/node@24.12.2)(typescript@5.9.3))(vite@7.3.2(@types/node@24.12.2)(jiti@2.6.1)(lightningcss@1.32.0))
+
+  packages/streams:
+    dependencies:
+      rxjs:
+        specifier: ^7.8.0
+        version: 7.8.2
+    devDependencies:
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
       vitest:
         specifier: ^4.1.0
         version: 4.1.4(@types/node@24.12.2)(jsdom@26.1.0(canvas@3.2.3))(msw@2.13.2(@types/node@24.12.2)(typescript@5.9.3))(vite@7.3.2(@types/node@24.12.2)(jiti@2.6.1)(lightningcss@1.32.0))
@@ -3279,6 +3298,9 @@ packages:
 
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
+
+  rxjs@7.8.2:
+    resolution: {integrity: sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==}
 
   safe-buffer@5.2.1:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
@@ -7037,6 +7059,10 @@ snapshots:
   run-parallel@1.2.0:
     dependencies:
       queue-microtask: 1.2.3
+
+  rxjs@7.8.2:
+    dependencies:
+      tslib: 2.8.1
 
   safe-buffer@5.2.1:
     optional: true
