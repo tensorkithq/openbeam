@@ -108,6 +108,9 @@ async fn main() {
         // Detection WebSocket
         .route("/ws/detection", get(routes::detection_ws::ws_handler))
         .with_state(app_state)
+        // STT proxy (stateless — no shared state needed, each connection is independent)
+        .route("/ws/transcription", get(routes::stt::ws_transcription))
+        .route("/api/transcription/status", get(routes::stt::transcription_status))
         .layer(CorsLayer::permissive());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();

@@ -34,15 +34,14 @@ pub async fn transcription_status() -> Json<Value> {
     }))
 }
 
-async fn handle_transcription(socket: WebSocket, api_key: String) {
+async fn handle_transcription(mut socket: WebSocket, api_key: String) {
     if api_key.is_empty() {
         tracing::warn!("STT proxy: empty API key, rejecting connection");
-        let (mut sender, _) = socket.split();
         let err = json!({
             "type": "stt:error",
             "message": "API key is required"
         });
-        let _ = sender
+        let _ = socket
             .send(Message::Text(serde_json::to_string(&err).unwrap().into()))
             .await;
         return;
@@ -53,81 +52,78 @@ async fn handle_transcription(socket: WebSocket, api_key: String) {
     let config = SttConfig::new(api_key);
     let client = DeepgramClient::new(config);
 
-    // Channel: browser audio bytes → Deepgram client
+    // Channel: browser audio bytes -> Deepgram client
     let (audio_tx, audio_rx) = mpsc::channel::<Vec<u8>>(128);
-    // Channel: Deepgram transcript events → browser
+    // Channel: Deepgram transcript events -> browser (outgoing WS messages)
     let (event_tx, mut event_rx) = mpsc::channel::<TranscriptEvent>(64);
 
-    let (mut ws_sender, mut ws_receiver) = socket.split();
-
-    // Task 1: Read from browser WebSocket, forward audio to Deepgram client
-    let browser_reader = tokio::spawn(async move {
-        while let Some(Ok(msg)) = ws_receiver.recv().await {
-            match msg {
-                Message::Binary(data) => {
-                    if audio_tx.send(data.to_vec()).await.is_err() {
-                        break;
-                    }
-                }
-                Message::Text(text) => {
-                    if let Ok(parsed) = serde_json::from_str::<Value>(&text) {
-                        if parsed.get("type").and_then(|v| v.as_str()) == Some("stop") {
-                            tracing::info!("STT proxy: received stop command");
-                            // Send empty vec to signal close
-                            let _ = audio_tx.send(Vec::new()).await;
-                            break;
-                        }
-                    }
-                }
-                Message::Close(_) => {
-                    tracing::info!("STT proxy: browser closed connection");
-                    break;
-                }
-                _ => {}
-            }
-        }
-        // Dropping audio_tx signals the Deepgram client to close
-    });
-
-    // Task 2: Read transcript events from Deepgram, send to browser
-    let browser_writer = tokio::spawn(async move {
-        use axum::extract::ws::Message as WsMsg;
-
-        while let Some(event) = event_rx.recv().await {
-            let json = match event_to_json(&event) {
-                Some(j) => j,
-                None => continue,
-            };
-            let text = match serde_json::to_string(&json) {
-                Ok(t) => t,
-                Err(e) => {
-                    tracing::error!("STT proxy: failed to serialize event: {e}");
-                    continue;
-                }
-            };
-            if ws_sender.send(WsMsg::Text(text.into())).await.is_err() {
-                break;
-            }
-        }
-    });
-
-    // Task 3: Run the Deepgram client (connects and streams)
-    let deepgram_task = tokio::spawn(async move {
+    // Task: Run the Deepgram client (connects and streams)
+    let mut deepgram_task = tokio::spawn(async move {
         if let Err(e) = client.connect(audio_rx, event_tx).await {
             tracing::error!("STT proxy: Deepgram connection error: {e}");
         }
     });
 
-    // Wait for any task to finish, then clean up
-    tokio::select! {
-        _ = browser_reader => {
-            tracing::debug!("STT proxy: browser reader finished");
-        }
-        _ = browser_writer => {
-            tracing::debug!("STT proxy: browser writer finished");
-        }
-        _ = deepgram_task => {
-            tracing::debug!("STT proxy: Deepgram task finished");
+    // Main loop: multiplex browser recv and Deepgram events on the single socket
+    loop {
+        tokio::select! {
+            // Browser -> server: audio or control messages
+            browser_msg = socket.recv() => {
+                match browser_msg {
+                    Some(Ok(Message::Binary(data))) => {
+                        if audio_tx.send(data.to_vec()).await.is_err() {
+                            break;
+                        }
+                    }
+                    Some(Ok(Message::Text(text))) => {
+                        if let Ok(parsed) = serde_json::from_str::<Value>(&text) {
+                            if parsed.get("type").and_then(|v| v.as_str()) == Some("stop") {
+                                tracing::info!("STT proxy: received stop command");
+                                let _ = audio_tx.send(Vec::new()).await;
+                                break;
+                            }
+                        }
+                    }
+                    Some(Ok(Message::Close(_))) | None => {
+                        tracing::info!("STT proxy: browser disconnected");
+                        break;
+                    }
+                    Some(Err(e)) => {
+                        tracing::warn!("STT proxy: browser WebSocket error: {e}");
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+            // Deepgram -> browser: transcript events
+            event = event_rx.recv() => {
+                match event {
+                    Some(evt) => {
+                        if let Some(json_val) = event_to_json(&evt) {
+                            let text = match serde_json::to_string(&json_val) {
+                                Ok(t) => t,
+                                Err(e) => {
+                                    tracing::error!("STT proxy: serialize error: {e}");
+                                    continue;
+                                }
+                            };
+                            if socket.send(Message::Text(text.into())).await.is_err() {
+                                break;
+                            }
+                        }
+                    }
+                    None => {
+                        // Deepgram client dropped the sender
+                        tracing::info!("STT proxy: Deepgram event channel closed");
+                        break;
+                    }
+                }
+            }
+            // Deepgram task finished unexpectedly
+            _ = &mut deepgram_task => {
+                tracing::info!("STT proxy: Deepgram task finished");
+                break;
+            }
         }
     }
 
