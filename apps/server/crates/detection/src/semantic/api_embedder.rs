@@ -25,15 +25,13 @@ impl ApiEmbedder {
 
 impl TextEmbedder for ApiEmbedder {
     fn embed(&self, text: &str) -> Result<Vec<f32>, DetectionError> {
-        // The trait is sync but reqwest is async. Use the current tokio
-        // runtime handle to block on the future. This works because the
-        // detection pipeline runs inside `spawn_blocking` or on a
-        // dedicated thread.
+        // The trait is sync but reqwest is async. Use block_in_place to
+        // allow blocking within the tokio runtime without panicking.
         let rt = tokio::runtime::Handle::try_current().map_err(|e| {
             DetectionError::Internal(format!("no tokio runtime available: {e}"))
         })?;
 
-        rt.block_on(async {
+        tokio::task::block_in_place(|| rt.block_on(async {
             let response = self
                 .client
                 .post("https://openrouter.ai/api/v1/embeddings")
@@ -62,7 +60,7 @@ impl TextEmbedder for ApiEmbedder {
             }
 
             Ok(embedding)
-        })
+        }))
     }
 
     fn dimension(&self) -> usize {
