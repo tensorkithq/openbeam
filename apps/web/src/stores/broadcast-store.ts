@@ -1,10 +1,10 @@
 import { create } from "zustand"
 import type { BroadcastTheme, VerseRenderData } from "@/types"
 import { BUILTIN_THEMES } from "@/lib/builtin-themes"
+import { overlaySocket } from "@/services"
 
-// TODO: Wire to WebSocket in WS-3
-function emitTo(_label: string, _event: string, _payload: unknown) {
-  /* no-op until WebSocket transport is implemented */
+function emitTo(label: string, _event: string, payload: unknown) {
+  overlaySocket.send("verse:update", { label, ...(payload as Record<string, unknown>) })
 }
 
 type SelectedElement = "verse" | "reference" | null
