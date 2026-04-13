@@ -113,6 +113,21 @@ impl DetectionMerger {
         results
     }
 
+    /// Merge direct, semantic, and quotation detections into a ranked list.
+    ///
+    /// Combines semantic + quotation into a single secondary vector,
+    /// then delegates to the existing `merge()` logic.
+    pub fn merge_all(
+        &mut self,
+        direct: Vec<Detection>,
+        semantic: Vec<Detection>,
+        quotation: Vec<Detection>,
+    ) -> Vec<MergedDetection> {
+        let mut combined_secondary = semantic;
+        combined_secondary.extend(quotation);
+        self.merge(direct, combined_secondary)
+    }
+
     /// Apply context boosting to a list of detections.
     ///
     /// Boosts confidence for detections in the same book/chapter as

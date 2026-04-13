@@ -2,6 +2,7 @@ use crate::direct::detector::DirectDetector;
 use crate::merger::{DetectionMerger, MergedDetection};
 use crate::semantic::cloud::CloudBooster;
 use crate::semantic::detector::SemanticDetector;
+use crate::types::Detection;
 
 /// The main detection pipeline that runs on each transcript segment.
 ///
@@ -82,6 +83,21 @@ impl DetectionPipeline {
         }
         let semantic_results = self.semantic.detect(text);
         self.merger.merge(vec![], semantic_results)
+    }
+
+    /// Run only direct detection, returning raw `Vec<Detection>` without merging.
+    /// Used by the WS handler so it can merge with quotation results externally.
+    pub fn detect_direct(&mut self, text: &str) -> Vec<Detection> {
+        self.direct.detect(text)
+    }
+
+    /// Run only semantic detection, returning raw `Vec<Detection>` without merging.
+    /// Skips short fragments (< 5 words). Used by the WS handler for external merging.
+    pub fn detect_semantic(&mut self, text: &str) -> Vec<Detection> {
+        if text.split_whitespace().count() < 5 {
+            return vec![];
+        }
+        self.semantic.detect(text)
     }
 
     /// Check if semantic search is available (model loaded + index populated).
