@@ -4,6 +4,7 @@ export class OpenBeamSocket {
   private ws: WebSocket | null = null
   private handlers = new Map<string, Set<MessageHandler>>()
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  private connectParams: Record<string, string> | null = null
   private url: string
 
   constructor(path: string) {
@@ -11,10 +12,14 @@ export class OpenBeamSocket {
     this.url = `${protocol}//${window.location.host}${path}`
   }
 
-  connect() {
+  connect(params?: Record<string, string>) {
     if (this.ws) this.disconnect()
+    this.connectParams = params ?? null
+    const url = params
+      ? `${this.url}${this.url.includes("?") ? "&" : "?"}${new URLSearchParams(params).toString()}`
+      : this.url
 
-    this.ws = new WebSocket(this.url)
+    this.ws = new WebSocket(url)
 
     this.ws.onopen = () => this.emit("_connected", {})
 
@@ -69,7 +74,7 @@ export class OpenBeamSocket {
   }
 
   private scheduleReconnect() {
-    this.reconnectTimer = setTimeout(() => this.connect(), 3000)
+    this.reconnectTimer = setTimeout(() => this.connect(this.connectParams ?? undefined), 3000)
   }
 
   get connected() {
