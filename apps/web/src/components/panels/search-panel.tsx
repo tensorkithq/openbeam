@@ -47,7 +47,7 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
         const cleaned = part.toLowerCase().replace(/[^a-z']/g, "")
         if (cleaned.length >= 2 && queryWords.has(cleaned)) {
           return (
-            <mark key={i} className="rounded-[2px] bg-emerald-800/90 px-0.5 text-foreground">
+            <mark key={i} className="rounded-[2px] bg-primary/80 px-0.5 text-foreground">
               {part}
             </mark>
           )
@@ -86,6 +86,11 @@ export function SearchPanel() {
   const quickSuggestion = useMemo(
     () => getAutocompleteSuggestion(quickInput, books).suggestion,
     [quickInput, books]
+  )
+
+  const quickInputStyle = useMemo(
+    () => quickSuggestion && quickSuggestion !== quickInput ? { caretColor: 'var(--foreground)' } : undefined,
+    [quickSuggestion, quickInput]
   )
 
   const selectedBookNumber = selectedBook?.book_number
@@ -311,14 +316,6 @@ export function SearchPanel() {
         chapter: result.chapter,
         verse: result.verse
       })
-
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (quickInputRef.current && document.activeElement !== quickInputRef.current) {
-            quickInputRef.current.focus()
-          }
-        })
-      })
     }
 
     // TODO: Wire to API in WS-3 — invoke("get_chapter") replaced with stub
@@ -394,11 +391,11 @@ export function SearchPanel() {
             className={cn(
               "flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
               activeTab === "book"
-                ? "border-lime-500/50 bg-lime-500/15 "
+                ? "border-primary/50 bg-primary/15"
                 : "border-border text-muted-foreground hover:text-foreground"
             )}
           >
-            <BookOpenIcon className={cn("size-3.5", activeTab === "book" ? "text-lime-400" : "text-muted-foreground")} />
+            <BookOpenIcon className={cn("size-3.5", activeTab === "book" ? "text-primary" : "text-muted-foreground")} />
             Book search
           </button>
           <button
@@ -410,11 +407,11 @@ export function SearchPanel() {
             className={cn(
               "flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
               activeTab === "context"
-                ? "border-lime-500/50 bg-lime-500/15"
-                : "border-border bg-background  text-muted-foreground hover:text-foreground"
+                ? "border-primary/50 bg-primary/15"
+                : "border-border bg-background text-muted-foreground hover:text-foreground"
             )}
           >
-            <SparklesIcon className={cn("size-3.5", activeTab === "context" ? "text-lime-400" : "text-muted-foreground")} />
+            <SparklesIcon className={cn("size-3.5", activeTab === "context" ? "text-primary" : "text-muted-foreground")} />
             Context search
           </button>
         </div>
@@ -426,7 +423,7 @@ export function SearchPanel() {
                 <div className="absolute inset-0 flex items-center px-3 pointer-events-none z-10">
                   <span className="text-xs font-normal">
                     <span className="text-foreground">{quickInput}</span>
-                    <span className="text-gray-500 dark:text-gray-400">{quickSuggestion.slice(quickInput.length)}</span>
+                    <span className="text-muted-foreground">{quickSuggestion.slice(quickInput.length)}</span>
                   </span>
                 </div>
               )}
@@ -442,9 +439,7 @@ export function SearchPanel() {
                   "h-7 text-xs relative bg-background",
                   quickSuggestion && quickSuggestion !== quickInput ? "text-transparent" : ""
                 )}
-                style={quickSuggestion && quickSuggestion !== quickInput ? {
-                  caretColor: 'var(--foreground)'
-                } : undefined}
+                style={quickInputStyle}
               />
 
               {showQuickVerses && quickVersesList.length > 0 && (
@@ -560,7 +555,7 @@ export function SearchPanel() {
                   className={cn(
                     "group flex cursor-pointer items-center gap-3 rounded-lg p-3 transition-colors",
                     verse.id === effectiveSelectedVerseId
-                      ? "border border-lime-500/50 bg-lime-500/10"
+                      ? "border border-primary/50 bg-primary/10"
                       : "hover:bg-muted/50"
                   )}
                 >
@@ -582,7 +577,7 @@ export function SearchPanel() {
                           className={cn(
                             "shrink-0 opacity-0 group-hover:opacity-100 transition-opacity",
                             verse.id === effectiveSelectedVerseId
-                              ? "hover:bg-lime-500/20 hover:text-lime-500"
+                              ? "hover:bg-primary/20 hover:text-primary"
                               : "bg-primary/40! text-primary-foreground hover:bg-primary!"
                           )}
                           onClick={(e) => {
