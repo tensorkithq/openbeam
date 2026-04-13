@@ -696,6 +696,7 @@ name = "openbeam-server"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "openbeam-stt",
  "rhema-bible",
  "rhema-detection",
  "serde",

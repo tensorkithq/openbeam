@@ -21,3 +21,4 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 rhema-bible = { path = "crates/bible" }
 rhema-detection = { path = "crates/detection", features = ["vector-search", "api-embedder"] }
+openbeam-stt = { path = "crates/stt" }
