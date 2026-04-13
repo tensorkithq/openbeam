@@ -30,7 +30,7 @@ interface BibleState {
   setPendingNavigation: (nav: PendingNavigation | null) => void
 }
 
-export const useBibleStore = create<BibleState>((set) => ({
+export const useBibleStore = create<BibleState>((set, get) => ({
   translations: [],
   activeTranslationId: 1,
   books: [],
@@ -45,7 +45,12 @@ export const useBibleStore = create<BibleState>((set) => ({
   setActiveTranslation: (activeTranslationId) => set({ activeTranslationId }),
   setBooks: (books) => set({ books }),
   setSearchResults: (searchResults) => set({ searchResults }),
-  setSemanticResults: (semanticResults) => set({ semanticResults }),
+  setSemanticResults: (semanticResults) => {
+    const current = get().semanticResults
+    if (current.length === 0 && semanticResults.length === 0) return
+    if (current === semanticResults) return
+    set({ semanticResults })
+  },
   selectVerse: (selectedVerse) => set({ selectedVerse }),
   setCurrentChapter: (currentChapter) => set({ currentChapter }),
   setCrossReferences: (crossReferences) => set({ crossReferences }),
