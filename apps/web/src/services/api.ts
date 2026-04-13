@@ -132,10 +132,12 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public body: string,
-  ) {
+  status: number
+  body: string
+
+  constructor(status: number, body: string) {
     super(`API error ${status}: ${body}`)
+    this.status = status
+    this.body = body
   }
 }

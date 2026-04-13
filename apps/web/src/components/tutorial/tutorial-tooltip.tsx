@@ -17,9 +17,11 @@ export function TutorialTooltip({
   const indexRef = useRef(index)
   const isLastStepRef = useRef(isLastStep)
 
-  controlsRef.current = controls
-  indexRef.current = index
-  isLastStepRef.current = isLastStep
+  useEffect(() => {
+    controlsRef.current = controls
+    indexRef.current = index
+    isLastStepRef.current = isLastStep
+  }, [controls, index, isLastStep])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

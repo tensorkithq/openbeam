@@ -78,7 +78,7 @@ export function TranscriptPanel() {
     useDetectionStore.getState().addDetections(detections)
 
     const directHit = detections.find(
-      (d) => d.source === "direct" || (d as DetectionResult & { source: string }).source === "contextual" || ((d as DetectionResult & { source: string }).source === "quotation" && d.auto_queued)
+      (d) => d.source === "direct" || d.source === "contextual" || (d.source === "quotation" && d.auto_queued)
     )
     if (directHit && directHit.book_number > 0) {
       bibleActions.selectVerse({

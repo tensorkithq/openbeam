@@ -6,7 +6,7 @@ export interface DetectionResult {
   chapter: number
   verse: number
   confidence: number
-  source: "direct" | "semantic_local" | "semantic_cloud"
+  source: "direct" | "semantic_local" | "semantic_cloud" | "contextual" | "quotation"
   auto_queued: boolean
   transcript_snippet: string
 }

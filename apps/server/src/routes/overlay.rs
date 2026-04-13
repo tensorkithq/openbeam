@@ -94,7 +94,7 @@ async fn handle_overlay_client(mut socket: WebSocket, relay: Arc<BroadcastRelay>
             msg = socket.recv() => {
                 match msg {
                     Some(Ok(Message::Text(text))) => {
-                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&*text) {
+                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&text) {
                             let msg_type = parsed.get("type").and_then(|v| v.as_str()).unwrap_or("");
                             if msg_type == "overlay:ready" {
                                 let cached = relay.state_rx.borrow().clone();

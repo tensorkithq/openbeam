@@ -7,7 +7,7 @@ use rhema_bible::BibleDb;
 use rhema_detection::semantic::index::VectorIndex;
 use rhema_detection::{DetectionPipeline, QuotationMatcher, SemanticDetector};
 use serde_json::{json, Value};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
@@ -202,7 +202,7 @@ async fn health(State(state): State<Arc<AppState>>) -> Json<Value> {
 }
 
 /// Try to load a semantic detector with the stub embedder and HNSW index.
-fn try_load_semantic(embeddings_path: &PathBuf, ids_path: &PathBuf) -> Option<SemanticDetector> {
+fn try_load_semantic(embeddings_path: &Path, ids_path: &Path) -> Option<SemanticDetector> {
     let dim = 4096; // Default for Qwen3 embeddings
     match rhema_detection::HnswVectorIndex::load(embeddings_path, ids_path, dim) {
         Ok(index) => {
@@ -221,8 +221,8 @@ fn try_load_semantic(embeddings_path: &PathBuf, ids_path: &PathBuf) -> Option<Se
 
 /// Try to load a semantic detector with the API embedder and HNSW index.
 fn try_load_semantic_with_api(
-    embeddings_path: &PathBuf,
-    ids_path: &PathBuf,
+    embeddings_path: &Path,
+    ids_path: &Path,
     api_key: String,
     model: String,
     dimension: usize,
