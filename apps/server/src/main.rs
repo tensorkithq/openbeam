@@ -1,3 +1,4 @@
+mod config;
 mod routes;
 mod state;
 
@@ -11,10 +12,12 @@ use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tracing_subscriber::EnvFilter;
 
+use config::Config;
 use state::AppState;
 
-fn find_bible_db() -> PathBuf {
+fn find_bible_db(configured_path: &str) -> PathBuf {
     let candidates = [
+        PathBuf::from(configured_path),
         PathBuf::from("data/rhema.db"),
         PathBuf::from("../../data/rhema.db"),
     ];
@@ -32,7 +35,10 @@ async fn main() {
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .init();
 
-    let db_path = find_bible_db();
+    let config = Config::from_env();
+    config.log_config();
+
+    let db_path = find_bible_db(&config.db_path);
     tracing::info!("Opening Bible database at {}", db_path.display());
 
     let bible_db = match BibleDb::open(&db_path) {
@@ -66,21 +72,17 @@ async fn main() {
         tracing::info!("Semantic search disabled (no vector index files)");
     }
 
-    // Try to configure API-based embedder from OPENROUTER_API_KEY
-    if let Ok(api_key) = std::env::var("OPENROUTER_API_KEY") {
+    // Try to configure API-based embedder from config
+    if let Some(ref api_key) = config.openrouter_api_key {
         if !api_key.is_empty() {
-            let model = std::env::var("OPENROUTER_EMBED_MODEL")
-                .unwrap_or_else(|_| "qwen/qwen3-embedding-8b".to_string());
-            let dimension: usize = std::env::var("OPENROUTER_EMBED_DIM")
-                .ok()
-                .and_then(|d| d.parse().ok())
-                .unwrap_or(4096);
+            let model = config.openrouter_embed_model.clone();
+            let dimension = config.openrouter_embed_dim;
 
             tracing::info!("API embedder configured: model={model}, dim={dimension}");
 
             // If we also have a vector index, wire up a real semantic detector
             if embeddings_path.exists() && ids_path.exists() {
-                if let Some(detector) = try_load_semantic_with_api(&embeddings_path, &ids_path, api_key, model, dimension) {
+                if let Some(detector) = try_load_semantic_with_api(&embeddings_path, &ids_path, api_key.clone(), model, dimension) {
                     pipeline.set_semantic(detector);
                     tracing::info!("Semantic search enabled with API embedder");
                 }
@@ -133,8 +135,9 @@ async fn main() {
         )
         .layer(CorsLayer::permissive());
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
-    tracing::info!("OpenBeam server listening on http://0.0.0.0:8080");
+    let addr = format!("{}:{}", config.host, config.port);
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    tracing::info!("OpenBeam server listening on http://{addr}");
     axum::serve(listener, app).await.unwrap();
 }
 
