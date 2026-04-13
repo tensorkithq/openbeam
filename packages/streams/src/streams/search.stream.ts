@@ -19,6 +19,8 @@ import {
 } from "rxjs/operators"
 import type { SemanticSearchResult } from "../types/detection"
 
+const EMPTY: SemanticSearchResult[] = []
+
 export interface SearchStreamConfig {
   /** User input query (push new values on each keystroke). */
   query$: Observable<string>
