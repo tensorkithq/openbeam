@@ -20,14 +20,14 @@ export function useTranscription() {
 
     store.setTranscribing(true)
     store.setConnectionStatus("connecting")
-    getManager().transcription.connect({ key: settings.deepgramApiKey })
+    getManager()?.transcription.connect({ key: settings.deepgramApiKey })
   }, [store, startCapture])
 
   const stopTranscription = useCallback(async () => {
     await stopCapture()
     store.setTranscribing(false)
     store.setPartial("")
-    getManager().transcription.disconnect()
+    getManager()?.transcription.disconnect()
   }, [store, stopCapture])
 
   return {

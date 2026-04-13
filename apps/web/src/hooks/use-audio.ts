@@ -47,7 +47,7 @@ export function useAudio() {
       workletNode.port.onmessage = (event) => {
         const { type } = event.data
         if (type === "audio") {
-          getManager().transcription.sendBinary(event.data.buffer)
+          getManager()?.transcription.sendBinary(event.data.buffer)
         } else if (type === "level") {
           store.setLevel({ rms: event.data.rms, peak: event.data.peak })
         }

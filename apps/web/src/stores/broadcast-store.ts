@@ -25,7 +25,9 @@ function persistBroadcastSettings(activeThemeId: string, altActiveThemeId: strin
 }
 
 function emitTo(label: string, _event: string, payload: unknown) {
-  getManager().overlay.send("verse:update", { label, ...(payload as Record<string, unknown>) })
+  const mgr = getManager()
+  if (!mgr) return
+  mgr.overlay.send("verse:update", { label, ...(payload as Record<string, unknown>) })
 }
 
 function loadThemesFromStorage(): BroadcastTheme[] {

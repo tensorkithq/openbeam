@@ -17,8 +17,7 @@ import { createConnectionManager, type ConnectionManager } from "./connection-ma
 
 let manager: ConnectionManager | null = null
 
-export function getManager(): ConnectionManager {
-  if (!manager) throw new Error("Streams not initialized — call initializeStreams() first")
+export function getManager(): ConnectionManager | null {
   return manager
 }
 
