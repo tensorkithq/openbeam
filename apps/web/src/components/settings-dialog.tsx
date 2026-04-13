@@ -64,11 +64,23 @@ function AudioSection() {
   const [devices, setDevices] = useState<DeviceInfo[]>([])
   const [loading, setLoading] = useState(true)
 
-  // TODO: Wire to API in WS-3
   const loadDevices = useCallback(async () => {
     try {
       setLoading(true)
-      setDevices([]) // stub
+      const mediaDevices = await navigator.mediaDevices.enumerateDevices()
+      const audioInputs = mediaDevices.filter((d) => d.kind === "audioinput")
+      setDevices(
+        audioInputs.map((d) => ({
+          id: d.deviceId,
+          name: d.label || `Microphone (${d.deviceId.slice(0, 8)})`,
+          sample_rate: 48000,
+          channels: 1,
+          is_default: d.deviceId === "default",
+        }))
+      )
+    } catch (e) {
+      console.error("[settings] Failed to enumerate audio devices:", e)
+      setDevices([])
     } finally {
       setLoading(false)
     }
