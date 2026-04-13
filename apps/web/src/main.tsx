@@ -1,11 +1,17 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
+
 import "./index.css"
+import App from "./App.tsx"
+import { ThemeProvider } from "@/components/theme-provider.tsx"
+import { TooltipProvider } from "@/components/ui/tooltip.tsx"
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <div className="flex h-screen items-center justify-center">
-      <h1 className="text-2xl font-bold">OpenBeam</h1>
-    </div>
+    <ThemeProvider defaultTheme="dark">
+      <TooltipProvider>
+        <App />
+      </TooltipProvider>
+    </ThemeProvider>
   </StrictMode>
 )
