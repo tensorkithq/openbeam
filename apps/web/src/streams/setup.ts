@@ -59,11 +59,14 @@ function dispatchRemoteCommand(cmd: RemoteCommand) {
  * Returns a cleanup function.
  */
 export function initializeStreams(): () => void {
+  const { sessionId } = useSettingsStore.getState()
+
   manager = createConnectionManager({
     transcription: "/ws/transcription",
     detection: "/ws/detection",
     overlay: "/ws/overlay?role=dashboard",
     remote: "/ws/remote",
+    sessionId,
   })
 
   // Create stream instances (cold until subscribed)
@@ -143,4 +146,8 @@ export function initializeStreams(): () => void {
     manager?.disconnectAll()
     manager = null
   }
+}
+
+export function getSessionId(): string {
+  return useSettingsStore.getState().sessionId
 }
