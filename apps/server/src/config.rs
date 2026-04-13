@@ -37,6 +37,7 @@ impl Config {
             self.host, self.port
         );
         tracing::info!("  db: {}", self.db_path);
+        tracing::info!("  log_level: {}", self.log_level);
         tracing::info!(
             "  embeddings: {} (dim={})",
             self.openrouter_embed_model, self.openrouter_embed_dim
