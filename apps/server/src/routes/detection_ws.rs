@@ -5,7 +5,7 @@ use axum::{
     },
     response::IntoResponse,
 };
-use rhema_detection::{DetectionPipeline, SentenceBuffer, SermonContext};
+use rhema_detection::{SentenceBuffer, SermonContext};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

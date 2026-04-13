@@ -9,12 +9,3 @@ pub struct AppState {
     pub detection_pipeline: Mutex<DetectionPipeline>,
     pub quotation_matcher: Mutex<QuotationMatcher>,
 }
-
-impl AppState {
-    pub fn new() -> Self {
-        Self {
-            detection_pipeline: Mutex::new(DetectionPipeline::new()),
-            quotation_matcher: Mutex::new(QuotationMatcher::new()),
-        }
-    }
-}
