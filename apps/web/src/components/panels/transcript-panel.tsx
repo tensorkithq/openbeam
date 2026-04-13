@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { PanelHeader } from "@/components/ui/panel-header"
 import { LevelMeter } from "@/components/ui/level-meter"
+import { LiveIndicator } from "@/components/ui/live-indicator"
 import { Button } from "@/components/ui/button"
 import { MicIcon, MicOffIcon } from "lucide-react"
 import { toast } from "sonner"
@@ -14,8 +15,9 @@ export function TranscriptPanel() {
   const segments = useTranscriptStore((s) => s.segments)
   const currentPartial = useTranscriptStore((s) => s.currentPartial)
   const isTranscribing = useTranscriptStore((s) => s.isTranscribing)
-  const connectionStatus = useTranscriptStore((s) => s.connectionStatus)
+
   const audioLevel = useAudioStore((s) => s.level)
+  const isCapturing = useAudioStore((s) => s.isCapturing)
   const { startTranscription, stopTranscription } = useTranscription()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [isStarting, setIsStarting] = useState(false)
@@ -61,27 +63,14 @@ export function TranscriptPanel() {
   return (
     <div
       data-slot="transcript-panel"
-      className="flex flex-col overflow-hidden rounded-lg border border-border bg-card"
+      className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card"
     >
       <PanelHeader
         title="Live transcript"
         icon={<MicIcon className="size-3" />}
       >
         <div className="flex items-center gap-2">
-          {isTranscribing && (
-            <span
-              className={`size-2 rounded-full ${
-                connectionStatus === "connected"
-                  ? "bg-emerald-500"
-                  : connectionStatus === "connecting"
-                    ? "animate-pulse bg-amber-500"
-                    : connectionStatus === "error"
-                      ? "bg-red-500"
-                      : "bg-muted-foreground/40"
-              }`}
-              title={connectionStatus}
-            />
-          )}
+          <LiveIndicator active={isCapturing} />
           <LevelMeter level={audioLevel.rms} bars={5} />
         </div>
       </PanelHeader>
@@ -91,7 +80,7 @@ export function TranscriptPanel() {
           <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-linear-to-b from-card to-transparent" />
 
           {segments.length === 0 && !currentPartial && !isTranscribing && (
-            <p className="text-sm text-muted-foreground">
+            <p className="p-4 text-center text-xs text-muted-foreground">
               Click "Start transcribing" to begin
             </p>
           )}
