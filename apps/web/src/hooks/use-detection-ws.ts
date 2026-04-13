@@ -8,8 +8,9 @@ export function useDetectionWebSocket() {
     detectionSocket.connect()
 
     const off = detectionSocket.on("detection:result", (_, data) => {
-      const results = (data as { data: DetectionResult[] }).data
-      if (results?.length) {
+      const payload = data as { data?: DetectionResult[] }
+      const results = payload.data ?? (Array.isArray(data) ? (data as DetectionResult[]) : [])
+      if (results.length) {
         useDetectionStore.getState().addDetections(results)
       }
     })
