@@ -741,14 +741,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "openbeam-bible"
+version = "0.1.0"
+dependencies = [
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "openbeam-detection"
+version = "0.1.0"
+dependencies = [
+ "aho-corasick",
+ "lru",
+ "openbeam-bible",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "openbeam-server"
 version = "0.1.0"
 dependencies = [
  "axum",
  "openbeam-api",
- "openbeam-stt",
  "openbeam-bible",
  "openbeam-detection",
+ "openbeam-stt",
  "serde",
  "serde_json",
  "tokio",
@@ -1006,31 +1031,6 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "webpki-roots 1.0.6",
-]
-
-[[package]]
-name = "openbeam-bible"
-version = "0.1.0"
-dependencies = [
- "rusqlite",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "openbeam-detection"
-version = "0.1.0"
-dependencies = [
- "aho-corasick",
- "lru",
- "reqwest",
- "openbeam-bible",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tracing",
 ]
 
 [[package]]
