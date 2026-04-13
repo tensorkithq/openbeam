@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["gcc", "pkg-config", "openssl"]
+nixPkgs = ["gcc", "pkg-config", "openssl", "sqlite"]
 
 [phases.build]
 cmds = ["cargo build --release"]

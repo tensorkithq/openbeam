@@ -1,8 +1,11 @@
 [build]
+builder = "nixpacks"
 buildCommand = "cargo build --release"
 watchPatterns = ["src/**", "crates/**", "Cargo.toml", "Cargo.lock"]
 
 [deploy]
 startCommand = "./target/release/openbeam-server"
 healthcheckPath = "/api/health"
-healthcheckTimeout = 30
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

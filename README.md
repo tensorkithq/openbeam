@@ -99,16 +99,35 @@ The `start` command builds the Rust server (:4001) and launches the Vite dev ser
 
 ### Deploy to Railway
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/template/XXXXXX?referralCode=openbeam)
+Create a new Railway project with two services pointing at this repo:
+
+1. **Server** — set Root Directory to `apps/server`
+   - Add env var `OPENROUTER_API_KEY`
+   - Railway auto-assigns `PORT`
+2. **Web** — set Root Directory to `apps/web`
+   - Add env var `VITE_API_URL` = the server service's public URL (e.g. `https://openbeam-server-production.up.railway.app`)
+   - Railway auto-assigns `PORT`
+
+Both services pick up their `railway.toml` configs automatically.
 
 ### Environment Variables
+
+**Server** (`apps/server`)
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `OPENROUTER_API_KEY` | Yes | — | Qwen3 embedding API key (platform cost, ~$11/mo at 10K users) |
-| `PORT` | No | 4001 | Server port |
+| `PORT` | No | 4001 | Server port (Railway sets this automatically) |
 | `DB_PATH` | No | ./data/openbeam.db | Bible database path |
+| `STATIC_DIR` | No | — | Path to built SPA files (for single-binary self-hosting) |
 | `RUST_LOG` | No | info | Log level |
+
+**Web** (`apps/web`)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_API_URL` | Yes | — | Server service URL (baked into the build) |
+| `PORT` | No | 3000 | Static file server port (Railway sets this automatically) |
 
 Users provide their own Deepgram API key in the browser. It's stored in [`localStorage`](apps/web/src/stores/settings-store.ts#L3) — the server never persists it, only [passing it through](apps/server/src/routes/stt.rs#L15-L24) to Deepgram's WebSocket per-connection.
 
@@ -173,6 +192,59 @@ OpenBeam is not a replacement for Rhema. It's the evaluation ramp.
 | Theme designer | Yes | Yes |
 | Remote control | OSC + HTTP | OSC + HTTP |
 | User data | Browser only | Local app storage |
+
+## Stream Orchestration (`@openbeam/streams`)
+
+OpenBeam uses a shared RxJS library at [`packages/streams`](packages/streams/) to manage all real-time data flow. The library is framework-agnostic — it produces observables that the React app subscribes to and pushes into Zustand stores.
+
+```
+Events (WebSocket, user input) → @openbeam/streams (compose, cancel, debounce) → Zustand (state) → React (UI)
+```
+
+### What it replaces
+
+The original hooks used manual `setTimeout` debouncing, `useRef` timer tracking, request ID counters for stale rejection, and `setInterval` polling — all hand-rolled and scattered across 6+ files. The stream library consolidates this into composable RxJS pipelines with `switchMap` (auto-cancel stale requests), `debounceTime`, `merge`, and `interval`.
+
+### Stream factories
+
+| Factory | Replaces | Key RxJS pattern |
+|---------|----------|-----------------|
+| `createTranscriptionStream` | `use-transcription.ts` event wiring | `share()` multicast for partials/finals |
+| `createDetectionStream` | `use-detection-ws.ts` | Consumes `finals$` from transcription |
+| `createSearchStream` | Manual debounce + requestId + fallback chain in search panel | `debounceTime` + `switchMap` + cascading `fallbackChain` operator |
+| `createRemoteControlStream` | 8 separate `remoteSocket.on()` listeners | `merge()` into typed discriminated union |
+| `createStatusSyncStream` | `setInterval` polling loop | `interval().pipe(switchMap(...))` |
+
+### Parity with Rhema
+
+OpenBeam's detection pipeline reuses Rhema's Rust crates server-side, but the client-side orchestration differs:
+
+| Capability | OpenBeam | Rhema Desktop |
+|-----------|---------|--------------|
+| Stream orchestration | RxJS (`@openbeam/streams`) | Tauri event system + Rust channels |
+| Sentence buffering | Server-side (Rust) | Client-side (Rust, in-process) |
+| Sermon context tracking | Server-side (Rust) | Client-side (Rust, in-process) |
+| Embedding inference | Cloud API (OpenRouter) | Local ONNX runtime |
+| Audio pipeline | Browser AudioWorklet → WebSocket | Native audio capture → in-process |
+
+The WebSocket boundary means OpenBeam pays latency that Rhema avoids with in-process communication. The RxJS layer mitigates this by keeping the UI responsive (non-blocking streams, automatic cancellation) while the server handles the heavy detection work.
+
+## Performance Notes
+
+### Search panel optimizations
+
+The search panel renders 30+ verse rows per chapter and 15+ context search results with highlighted text. Key optimizations applied:
+
+- **Memoized `VerseRow`** — each book tab row is a `memo()` component keyed on `(verse, isSelected)`. Selecting a new verse only re-renders the two affected rows (previously selected + newly selected), not all 30+.
+- **Memoized `HighlightedText`** — regex-based word highlighting only re-runs when `text` or `query` actually change, not on every parent re-render.
+- **Individual Zustand selectors** — the search panel subscribes to `useBibleStore((s) => s.currentChapter)` and `useBibleStore((s) => s.semanticResults)` separately instead of pulling the entire store. Zustand skips re-renders when the selected slice hasn't changed by reference.
+- **No focus theft** — pending navigation (autocomplete, detection clicks, remote control) only focuses the panel if no `<input>` is currently active, so typing is never interrupted.
+
+### Stream-level optimizations
+
+- **`switchMap` cancellation** — context search automatically aborts in-flight Fuse.js/FTS/semantic requests when the user types a new character, preventing stale results from overwriting fresh ones.
+- **`share()` multicast** — transcript finals are multicasted to both the transcript store and the detection stream without duplicate processing.
+- **`shareReplay(1)` for connection status** — late subscribers (e.g., a status indicator mounted after the socket connects) immediately get the current status without waiting for the next change.
 
 ## Acknowledgments
 

@@ -1,6 +1,7 @@
 [build]
-buildCommand = "pnpm install && pnpm build"
+builder = "nixpacks"
+# rootDirectory is set to apps/web in Railway — navigate up to workspace root for pnpm install
+buildCommand = "cd ../.. && npm i -g pnpm && pnpm install --frozen-lockfile && pnpm --filter @openbeam/web build"
 
 [deploy]
-# Static files served by Railway's static hosting
-staticFolder = "build"
+startCommand = "npx serve build -s -l tcp://0.0.0.0:$PORT"
