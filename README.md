@@ -130,16 +130,18 @@ Users provide their own Deepgram API key in the browser. It's stored in [`localS
 ## Project Structure
 
 ```
-apps/
-  web/              React dashboard SPA
-  server/           Axum Rust backend
-    crates/
-      bible/        SQLite Bible DB + FTS5 search
-      detection/    Aho-Corasick, HNSW, quotation matcher, pipeline
-      stt/          Deepgram WebSocket client
-      api/          OSC + HTTP remote control
-packages/
-  overlay/          Broadcast overlay (standalone, see migration plan)
+apps
+├── web
+│   └── React dashboard SPA
+├── server
+│   ├── Axum Rust backend
+│   └── crates
+│       ├── bible        — SQLite Bible DB + FTS5 search
+│       ├── detection    — Aho-Corasick, HNSW, quotation matcher, pipeline
+│       ├── stt          — Deepgram WebSocket client
+│       └── api          — OSC + HTTP remote control
+packages
+└── overlay              — Broadcast overlay (standalone)
 ```
 
 ## Design Decisions
