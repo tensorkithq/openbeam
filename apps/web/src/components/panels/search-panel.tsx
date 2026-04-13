@@ -137,7 +137,8 @@ export function SearchPanel() {
 
   const quickInputRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
-  const chapterLoadRef = useRef<ReturnType<typeof setTimeout>>()
+  const chapterLoadRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const focusAfterNavRef = useRef<boolean | undefined>(undefined)
 
   // Subscribe to individual slices to avoid re-rendering the entire panel on unrelated changes
   const translations = useBibleStore((s) => s.translations)
@@ -229,10 +230,12 @@ export function SearchPanel() {
             .getElementById(`verse-${target.id}`)
             ?.scrollIntoView({ behavior: "smooth", block: "center" })
         }
-        // Only focus the panel if no input is currently focused
-        if (!(document.activeElement instanceof HTMLInputElement)) {
+        // Focus panel and sync input unless this was a mid-typing autocomplete preview
+        if (focusAfterNavRef.current !== false) {
+          setQuickInput(`${book.name} ${navChapter}:${navVerse}`)
           panelRef.current?.focus()
         }
+        focusAfterNavRef.current = undefined
       }).catch(console.error).finally(() => {
         useBibleStore.getState().setPendingNavigation(null)
       })
@@ -337,6 +340,8 @@ export function SearchPanel() {
     const result = getAutocompleteSuggestion(quickInput, books)
 
     if (result.matchedBook && result.chapter && result.verse) {
+      // This is a mid-typing preview — don't focus after navigation
+      focusAfterNavRef.current = false
       useBibleStore.getState().setPendingNavigation({
         bookNumber: result.matchedBook.book_number,
         chapter: result.chapter,
@@ -371,7 +376,18 @@ export function SearchPanel() {
 
     if (e.key === "Enter") {
       e.preventDefault()
-      setQuickInput("")
+      focusAfterNavRef.current = true
+      // Sync input to the resolved reference so user can edit in-place
+      // e.g. "Songs of Solomon 4:4" — backspace twice, type "8" → chapter 8
+      const result = getAutocompleteSuggestion(quickInput, books)
+      if (result.matchedBook && result.chapter) {
+        const ref = result.verse
+          ? `${result.matchedBook.name} ${result.chapter}:${result.verse}`
+          : `${result.matchedBook.name} ${result.chapter}:`
+        setQuickInput(ref)
+      } else {
+        setQuickInput("")
+      }
       setShowQuickVerses(false)
       return
     }
@@ -382,15 +398,16 @@ export function SearchPanel() {
       setShowQuickVerses(false)
       return
     }
-  }, [quickInput, quickSuggestion])
+  }, [quickInput, quickSuggestion, books])
 
   const handleQuickVerseClick = useCallback((verse: Verse) => {
+    focusAfterNavRef.current = true
     useBibleStore.getState().setPendingNavigation({
       bookNumber: verse.book_number,
       chapter: verse.chapter,
       verse: verse.verse
     })
-    setQuickInput("")
+    setQuickInput(`${verse.book_name} ${verse.chapter}:${verse.verse}`)
     setShowQuickVerses(false)
   }, [])
 
