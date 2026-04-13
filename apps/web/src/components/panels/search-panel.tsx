@@ -60,7 +60,6 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
 
 export function SearchPanel() {
   const [activeTab, setActiveTab] = useState<SearchTab>("book")
-  const [_bookOpen, setBookOpen] = useState(false)
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [chapter, setChapter] = useState(1)
   const [selectedVerseId, setSelectedVerseId] = useState<number | null>(null)
@@ -72,7 +71,6 @@ export function SearchPanel() {
   const [showQuickVerses, setShowQuickVerses] = useState(false)
   const [quickVersesList, setQuickVersesList] = useState<Verse[]>([])
 
-  const chapterInputRef = useRef<HTMLInputElement>(null)
   const quickInputRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -171,48 +169,10 @@ export function SearchPanel() {
     return unsubscribe
   }, [applyNavigationSelection])
 
-  const _handleBookSelect = useCallback((book: Book) => {
-    setSelectedBook(book)
-    setChapter(1)
-    setChapterInput("")
-    setSelectedVerseId(null)
-    setBookOpen(false)
-    setTimeout(() => chapterInputRef.current?.focus(), 50)
-  }, [])
-
   const handleVerseClick = useCallback((verse: Verse) => {
     setSelectedVerseId(verse.id)
     bibleActions.selectVerse(verse)
   }, [])
-
-  const _handleChapterInput = useCallback(
-    (value: string) => {
-      setChapterInput(value)
-      const match = value.match(/^(\d+)(?::(\d+))?$/)
-      if (match) {
-        const ch = parseInt(match[1])
-        if (ch >= 1) {
-          setChapter(ch)
-          setSelectedVerseId(null)
-          if (match[2]) {
-            const verseNum = parseInt(match[2])
-            setTimeout(() => {
-              const verses = currentChapter
-              const target = verses.find((v) => v.verse === verseNum)
-              if (target) {
-                setSelectedVerseId(target.id)
-                bibleActions.selectVerse(target)
-                document
-                  .getElementById(`verse-${target.id}`)
-                  ?.scrollIntoView({ behavior: "smooth", block: "center" })
-              }
-            }, 200)
-          }
-        }
-      }
-    },
-    [currentChapter]
-  )
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
