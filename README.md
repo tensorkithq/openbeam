@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="./beamer.png" alt="OpenBeam" height="80" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./openbeam-dark.png" />
+    <source media="(prefers-color-scheme: light)" srcset="./openbeam-light.png" />
+    <img src="./openbeam-light.png" alt="OpenBeam" height="80" />
+  </picture>
 </p>
 <p align="center">
   Real-time Bible verse detection for live sermons — in your browser.
@@ -12,6 +16,10 @@
 OpenBeam is the cloud companion to [Rhema](https://github.com/openbezal/rhema), a desktop application for real-time Bible verse detection during live sermons. OpenBeam brings the same multi-strategy detection pipeline to the browser — no downloads, no installation, no setup beyond a Deepgram API key.
 
 A preacher says *"nothing can separate us from God's love"* and OpenBeam surfaces **Romans 8:38-39** in real-time, ready for your broadcast overlay.
+
+<p align="center">
+  <img src="./openbeam-banner.png" alt="OpenBeam" width="90%" />
+</p>
 
 ## Why OpenBeam exists
 
