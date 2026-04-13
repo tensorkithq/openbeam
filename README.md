@@ -114,7 +114,7 @@ The `start` command builds the Rust server (:4001) and launches the Vite dev ser
 | `DB_PATH` | No | ./data/openbeam.db | Bible database path |
 | `RUST_LOG` | No | info | Log level |
 
-Users provide their own Deepgram API key in the browser. It's stored in `localStorage` — the server never sees it except as a pass-through to Deepgram's WebSocket.
+Users provide their own Deepgram API key in the browser. It's stored in [`localStorage`](apps/web/src/stores/settings-store.ts#L3) — the server never persists it, only [passing it through](apps/server/src/routes/stt.rs#L15-L24) to Deepgram's WebSocket per-connection.
 
 ## Features
 
