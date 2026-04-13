@@ -16,7 +16,7 @@ impl Config {
             port: env::var("PORT")
                 .ok()
                 .and_then(|p| p.parse().ok())
-                .unwrap_or(8080),
+                .unwrap_or(4001),
             host: env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
             openrouter_api_key: env::var("OPENROUTER_API_KEY").ok(),
             openrouter_embed_model: env::var("OPENROUTER_EMBED_MODEL")
