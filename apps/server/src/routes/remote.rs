@@ -1,7 +1,7 @@
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        State,
+        Query, State,
     },
     http::StatusCode,
     response::IntoResponse,
@@ -12,43 +12,95 @@ use openbeam_api::{
     WebSocketCommandSink,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{broadcast, Mutex, RwLock};
 
-/// Shared state for remote control routes.
-pub struct RemoteState {
+/// Per-session state: command broadcast channel + status snapshot.
+pub struct RemoteSessionState {
     pub command_tx: broadcast::Sender<String>,
     pub sink: Arc<WebSocketCommandSink>,
-    pub osc: Mutex<Option<OscHandle>>,
     pub status: SharedStatus,
 }
 
-impl RemoteState {
+impl RemoteSessionState {
     pub fn new() -> Self {
         let (command_tx, _) = broadcast::channel(64);
         let sink = Arc::new(WebSocketCommandSink::new(command_tx.clone()));
         Self {
             command_tx,
             sink,
-            osc: Mutex::new(None),
             status: openbeam_api::new_shared_status(),
         }
     }
 }
 
+/// Maps session IDs to per-session remote state.
+pub struct SessionRemoteMap {
+    sessions: RwLock<HashMap<String, Arc<RemoteSessionState>>>,
+}
+
+impl SessionRemoteMap {
+    pub fn new() -> Self {
+        Self {
+            sessions: RwLock::new(HashMap::new()),
+        }
+    }
+
+    pub async fn get_or_create(&self, session_id: &str) -> Arc<RemoteSessionState> {
+        {
+            let map = self.sessions.read().await;
+            if let Some(state) = map.get(session_id) {
+                return state.clone();
+            }
+        }
+        let mut map = self.sessions.write().await;
+        map.entry(session_id.to_string())
+            .or_insert_with(|| Arc::new(RemoteSessionState::new()))
+            .clone()
+    }
+}
+
+/// Global state for remote control routes: session map + OSC handle.
+pub struct RemoteState {
+    pub sessions: SessionRemoteMap,
+    pub osc: Mutex<Option<OscHandle>>,
+}
+
+impl RemoteState {
+    pub fn new() -> Self {
+        Self {
+            sessions: SessionRemoteMap::new(),
+            osc: Mutex::new(None),
+        }
+    }
+}
+
+fn default_session() -> String {
+    "default".to_string()
+}
+
 // --- WebSocket: dashboard receives remote command events ---
+
+#[derive(Deserialize)]
+pub struct RemoteQuery {
+    #[serde(default = "default_session")]
+    session: String,
+}
 
 pub async fn ws_remote(
     ws: WebSocketUpgrade,
+    Query(params): Query<RemoteQuery>,
     State(state): State<Arc<RemoteState>>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_remote_ws(socket, state))
+    let session = state.sessions.get_or_create(&params.session).await;
+    ws.on_upgrade(move |socket| handle_remote_ws(socket, session))
 }
 
-async fn handle_remote_ws(mut socket: WebSocket, state: Arc<RemoteState>) {
+async fn handle_remote_ws(mut socket: WebSocket, session: Arc<RemoteSessionState>) {
     tracing::info!("remote: WebSocket client connected");
 
-    let mut rx = state.command_tx.subscribe();
+    let mut rx = session.command_tx.subscribe();
 
     loop {
         tokio::select! {
@@ -101,7 +153,9 @@ pub async fn start_osc(
         host: "0.0.0.0".into(),
     };
 
-    match openbeam_api::start_osc_listener(config, state.sink.clone()) {
+    // OSC is global — dispatch to the "default" session
+    let default_session = state.sessions.get_or_create("default").await;
+    match openbeam_api::start_osc_listener(config, default_session.sink.clone()) {
         Ok(handle) => {
             let bound_port = handle.bound_port();
             tracing::info!("OSC listener started on port {bound_port}");
@@ -151,12 +205,20 @@ struct ControlResponse {
     error: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct ControlQuery {
+    #[serde(default = "default_session")]
+    session: String,
+}
+
 pub async fn control(
+    Query(params): Query<ControlQuery>,
     State(state): State<Arc<RemoteState>>,
     Json(cmd): Json<RemoteCommand>,
 ) -> impl IntoResponse {
+    let session = state.sessions.get_or_create(&params.session).await;
     tracing::debug!("Remote control command: {cmd}");
-    match CommandDispatcher::dispatch(&cmd, &*state.sink) {
+    match CommandDispatcher::dispatch(&cmd, &*session.sink) {
         Ok(()) => (
             StatusCode::OK,
             Json(ControlResponse {
@@ -176,16 +238,28 @@ pub async fn control(
 
 // --- Status snapshot ---
 
-pub async fn get_status(State(state): State<Arc<RemoteState>>) -> impl IntoResponse {
-    let snapshot = state.status.read().await;
+#[derive(Deserialize)]
+pub struct StatusQuery {
+    #[serde(default = "default_session")]
+    session: String,
+}
+
+pub async fn get_status(
+    Query(params): Query<StatusQuery>,
+    State(state): State<Arc<RemoteState>>,
+) -> impl IntoResponse {
+    let session = state.sessions.get_or_create(&params.session).await;
+    let snapshot = session.status.read().await;
     Json(snapshot.clone())
 }
 
 pub async fn update_status(
+    Query(params): Query<StatusQuery>,
     State(state): State<Arc<RemoteState>>,
     Json(update): Json<StatusUpdate>,
 ) -> impl IntoResponse {
-    let mut snapshot = state.status.write().await;
+    let session = state.sessions.get_or_create(&params.session).await;
+    let mut snapshot = session.status.write().await;
     snapshot.apply_update(&update);
     StatusCode::OK
 }
