@@ -56,15 +56,19 @@ export class OpenBeamSocket {
   }
 
   send(type: string, data?: Record<string, unknown>) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type, ...data }))
+    if (this.ws?.readyState !== WebSocket.OPEN) {
+      console.warn(`[OpenBeamSocket] send "${type}" dropped — not connected to ${this.url}`)
+      return
     }
+    this.ws.send(JSON.stringify({ type, ...data }))
   }
 
   sendBinary(data: ArrayBuffer) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(data)
+    if (this.ws?.readyState !== WebSocket.OPEN) {
+      console.warn(`[OpenBeamSocket] sendBinary dropped — not connected to ${this.url}`)
+      return
     }
+    this.ws.send(data)
   }
 
   on(type: string, handler: MessageHandler): () => void {
@@ -87,9 +91,3 @@ export class OpenBeamSocket {
     return this.ws?.readyState === WebSocket.OPEN
   }
 }
-
-// Singleton instances
-export const transcriptionSocket = new OpenBeamSocket("/ws/transcription")
-export const detectionSocket = new OpenBeamSocket("/ws/detection")
-export const overlaySocket = new OpenBeamSocket("/ws/overlay?role=dashboard")
-export const remoteSocket = new OpenBeamSocket("/ws/remote")
