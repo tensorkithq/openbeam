@@ -2,7 +2,7 @@ mod config;
 mod routes;
 mod state;
 
-use axum::{routing::{get, post}, Json, Router};
+use axum::{extract::State, routing::{get, post}, Json, Router};
 use rhema_bible::BibleDb;
 use rhema_detection::semantic::index::VectorIndex;
 use rhema_detection::{DetectionPipeline, QuotationMatcher, SemanticDetector};
@@ -141,11 +141,32 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn health() -> Json<Value> {
+async fn health(State(state): State<Arc<AppState>>) -> Json<Value> {
+    let has_semantic = state
+        .detection_pipeline
+        .lock()
+        .await
+        .has_semantic();
+    let quotation_ready = state
+        .quotation_matcher
+        .lock()
+        .await
+        .is_ready();
+
     Json(json!({
         "status": "ok",
         "service": "openbeam",
-        "version": env!("CARGO_PKG_VERSION")
+        "version": env!("CARGO_PKG_VERSION"),
+        "capabilities": {
+            "bible": true,
+            "detection": {
+                "direct": true,
+                "semantic": has_semantic,
+                "quotation": quotation_ready,
+            },
+            "stt": true,
+            "overlay": true,
+        }
     }))
 }
 
