@@ -1,60 +1,12 @@
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback } from "react"
 import { useTranscriptStore } from "@/stores"
 import { useSettingsStore } from "@/stores/settings-store"
-import { transcriptionSocket, detectionSocket } from "@/services"
+import { transcriptionSocket } from "@/services"
 import { useAudio } from "./use-audio"
 
 export function useTranscription() {
   const store = useTranscriptStore()
   const { startCapture, stopCapture } = useAudio()
-  const cleanups = useRef<(() => void)[]>([])
-
-  // Wire WebSocket transcript events to store
-  useEffect(() => {
-    const offPartial = transcriptionSocket.on("transcript:partial", (_, data) => {
-      const payload = data as { text: string }
-      store.setPartial(payload.text)
-    })
-
-    const offFinal = transcriptionSocket.on("transcript:final", (_, data) => {
-      const payload = data as {
-        text: string
-        confidence: number
-        words: { text: string; start: number; end: number; confidence: number; punctuated: string }[]
-      }
-      const segment = {
-        id: crypto.randomUUID(),
-        text: payload.text,
-        is_final: true,
-        confidence: payload.confidence,
-        words: payload.words ?? [],
-        timestamp: Date.now(),
-      }
-      store.addSegment(segment)
-      detectionSocket.send("transcript:final", { text: payload.text })
-    })
-
-    const offConnected = transcriptionSocket.on("_connected", () => {
-      store.setConnectionStatus("connected")
-    })
-
-    const offDisconnected = transcriptionSocket.on("_disconnected", () => {
-      store.setConnectionStatus("disconnected")
-    })
-
-    const offError = transcriptionSocket.on("transcript:error", (_, data) => {
-      const payload = data as { message: string }
-      console.error("[transcription] error:", payload.message)
-      store.setConnectionStatus("error")
-    })
-
-    cleanups.current = [offPartial, offFinal, offConnected, offDisconnected, offError]
-
-    return () => {
-      cleanups.current.forEach((fn) => fn())
-      cleanups.current = []
-    }
-  }, [store])
 
   const startTranscription = useCallback(async () => {
     const settings = useSettingsStore.getState()
