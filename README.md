@@ -43,29 +43,25 @@ All three strategies feed into a confidence-weighted merger with deduplication a
 
 ## Architecture
 
-```
-  Browser Microphone
-        |
-        v
-  ┌─────────────────┐     WebSocket      ┌──────────────────────┐
-  │   React 19 SPA  │ ◄────────────────► │    Axum Server       │
-  │                  │    /ws/transcription│    (Rust)            │
-  │  Zustand stores  │    /ws/detection   │                      │
-  │  shadcn/ui       │    /ws/overlay     │  ┌────────────────┐  │
-  │  Tailwind v4     │                    │  │ Aho-Corasick   │  │
-  │                  │                    │  │ HNSW + Qwen3   │  │
-  └─────────┬────────┘                    │  │ Quotation Index│  │
-            │                             │  │ Sentence Buffer│  │
-            │                             │  │ Sermon Context │  │
-            │                             │  └────────────────┘  │
-  ┌─────────▼────────┐                    │                      │
-  │  OBS Browser Src │ ◄──── /ws/overlay  │  SQLite + FTS5       │
-  │  /overlay.html   │                    │  10+ translations    │
-  │  transparent bg  │                    │  340k cross-refs     │
-  └──────────────────┘                    └──────────────────────┘
-                                                    │
-                                            Deepgram (user's key)
-                                            OpenRouter (platform)
+```mermaid
+graph TB
+    subgraph Browser
+        MIC[Browser Microphone]
+        SPA["React 19 SPA<br/>Zustand · shadcn/ui · Tailwind v4"]
+        OBS["OBS Browser Source<br/>/overlay.html"]
+    end
+
+    subgraph Server ["Axum Server · Rust"]
+        PIPE["Detection Pipeline<br/>Aho-Corasick · HNSW + Qwen3<br/>Quotation Index · Sentence Buffer<br/>Sermon Context"]
+        DB[("SQLite + FTS5<br/>10+ translations<br/>340k cross-refs")]
+    end
+
+    MIC --> SPA
+    SPA <-->|"/ws/transcription<br/>/ws/detection<br/>/ws/overlay"| Server
+    Server --> OBS
+
+    DG["Deepgram<br/>user's key"] -.-> Server
+    OR["OpenRouter<br/>platform key"] -.-> Server
 ```
 
 | Layer | Stack |
