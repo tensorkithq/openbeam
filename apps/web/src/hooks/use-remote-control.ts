@@ -83,7 +83,7 @@ export function useRemoteControl() {
         .catch(() => {
           // Server may not be reachable yet
         })
-    }, 1000)
+    }, 5000)
 
     return () => {
       unsubs.forEach((unsub) => unsub())

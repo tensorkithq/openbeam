@@ -332,7 +332,7 @@ function RemoteControlSection() {
 
   useEffect(() => {
     pollOscStatus()
-    pollRef.current = setInterval(pollOscStatus, 2000)
+    pollRef.current = setInterval(pollOscStatus, 5000)
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
