@@ -5,6 +5,7 @@ import {
   createStatusSyncStream,
   StreamOrchestrator,
   type RemoteCommand,
+  type DetectionResult,
 } from "@openbeam/streams"
 import { api } from "@/services"
 import { useTranscriptStore } from "@/stores/transcript-store"
@@ -12,6 +13,7 @@ import { useDetectionStore } from "@/stores/detection-store"
 import { useBroadcastStore } from "@/stores/broadcast-store"
 import { useQueueStore } from "@/stores/queue-store"
 import { useSettingsStore } from "@/stores/settings-store"
+import { useBibleStore } from "@/stores/bible-store"
 import { navigateNext, navigatePrev } from "@/hooks/use-remote-control"
 import { createConnectionManager, type ConnectionManager } from "./connection-manager"
 
@@ -52,6 +54,53 @@ function dispatchRemoteCommand(cmd: RemoteCommand) {
     case "opacity":
       break
   }
+}
+
+/**
+ * When autoMode is on, auto-present the highest-confidence auto_queued detection.
+ * Also adds it to the queue so the user can navigate back to it.
+ */
+function autoPresent(results: DetectionResult[]) {
+  const { autoMode } = useSettingsStore.getState()
+  if (!autoMode) return
+
+  const best = results.find((r) => r.auto_queued)
+  if (!best) return
+
+  const translation =
+    useBibleStore.getState().translations.find(
+      (t) => t.id === useBibleStore.getState().activeTranslationId,
+    )?.abbreviation ?? "KJV"
+
+  const verse = {
+    id: 0,
+    translation_id: useBibleStore.getState().activeTranslationId,
+    book_number: best.book_number,
+    book_name: best.book_name,
+    book_abbreviation: "",
+    chapter: best.chapter,
+    verse: best.verse,
+    text: best.verse_text,
+  }
+
+  // Present on broadcast
+  useBroadcastStore.getState().setLiveVerse({
+    reference: `${best.book_name} ${best.chapter}:${best.verse} (${translation})`,
+    segments: [{ verseNumber: best.verse, text: best.verse_text }],
+  })
+
+  // Add to queue so user can navigate back
+  useQueueStore.getState().addItem({
+    id: crypto.randomUUID(),
+    verse,
+    reference: best.verse_ref,
+    confidence: best.confidence,
+    source: best.source === "direct" ? "ai-direct" : "ai-semantic",
+    added_at: Date.now(),
+  })
+
+  // Select the verse in the search panel
+  useBibleStore.getState().selectVerse(verse)
 }
 
 /**
@@ -103,11 +152,12 @@ export function initializeStreams(): () => void {
     }),
   )
 
-  // Detection → detection store
+  // Detection → detection store + auto-present
   manager.connectAll()
   orchestrator.add(
     detectionStreams.detections$.subscribe((results) => {
       useDetectionStore.getState().addDetections(results)
+      autoPresent(results)
     }),
   )
   if (detectionStreams._forwardSubscription) {
