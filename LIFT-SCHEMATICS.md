@@ -194,6 +194,16 @@ Production concerns for web deployment.
 
 ---
 
+### WS-11: Railway Deployment — One-Click Deploy Button
+Ship a Railway deployment pack so anyone can deploy OpenBeam with a single click.
+
+**Railway template**: `railway.toml` + `railway.json` configuring both services (server + web)
+**Dockerfiles**: Multi-stage Rust build with `cargo-chef` caching; Vite → static serve
+**Data pipeline**: Init script downloads Bible DB, ONNX model (~571MB INT8), HNSW index on first run — persisted on Railway volumes
+**Deploy button**: "Deploy on Railway" badge in README, provisions both services wired together
+
+---
+
 ## Migration Order (Recommended)
 
 ```
@@ -214,6 +224,7 @@ Phase 3: Media & IO
 
 Phase 4: Production
   WS-10 Auth, Sessions & Deployment
+  WS-11 Railway Deployment — One-Click Deploy Button
 ```
 
 ---
