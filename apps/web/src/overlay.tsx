@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createRoot } from "react-dom/client"
 import { useRef, useEffect, useCallback, useState } from "react"
+import "./index.css"
 import { renderVerse } from "@/lib/verse-renderer"
 import { OpenBeamSocket } from "@/services/ws"
 import type { BroadcastTheme, VerseRenderData } from "@/types/broadcast"
@@ -13,6 +14,7 @@ interface BroadcastPayload {
 const params = new URLSearchParams(window.location.search)
 const themeFilter = params.get("theme")
 const resolutionParam = params.get("resolution")
+const outputId = params.get("output") || "main"
 
 let initWidth = 1920
 let initHeight = 1080
@@ -95,7 +97,7 @@ function BroadcastCanvas() {
 
     const offConnected = overlaySocket.on("_connected", () => {
       setConnected(true)
-      overlaySocket.send("overlay:ready")
+      overlaySocket.send("overlay:ready", { output: outputId })
     })
 
     const offDisconnected = overlaySocket.on("_disconnected", () => {
@@ -142,6 +144,19 @@ function BroadcastCanvas() {
           pointerEvents: "none",
         }}
       />
+      {!connected && (
+        <div style={{
+          position: "fixed",
+          bottom: 24,
+          left: "50%",
+          transform: "translateX(-50%)",
+          color: "rgba(255,255,255,0.5)",
+          fontSize: 12,
+          fontFamily: "system-ui",
+        }}>
+          Waiting for connection...
+        </div>
+      )}
     </>
   )
 }
