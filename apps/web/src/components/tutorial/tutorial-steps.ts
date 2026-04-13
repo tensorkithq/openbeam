@@ -35,7 +35,7 @@ export const TUTORIAL_STEPS: Step[] = [
     target: '[data-tour="context-search"]',
     title: "Context Search",
     content:
-      "Search by phrase or topic. Rhema uses AI to find matching verses.",
+      "Search by phrase or topic. OpenBeam uses AI to find matching verses.",
     placement: "bottom",
     spotlightPadding: 2,
   },
