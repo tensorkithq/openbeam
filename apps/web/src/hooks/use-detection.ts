@@ -1,10 +1,8 @@
 import { useDetectionStore } from "@/stores"
-import type { DetectionResult } from "@/types"
+import { api } from "@/services"
 
-// TODO: Wire to API in WS-3
-
-async function detectVerses(_text: string) {
-  const results: DetectionResult[] = [] // stub
+async function detectVerses(text: string) {
+  const results = await api.detectVerses(text)
   if (results.length > 0) {
     useDetectionStore.getState().addDetections(results)
   }
@@ -12,7 +10,7 @@ async function detectVerses(_text: string) {
 }
 
 async function getDetectionStatus() {
-  return { has_direct: false, has_semantic: false, has_cloud: false } // stub
+  return api.detectionStatus()
 }
 
 export const detectionActions = {

@@ -1,42 +1,43 @@
 import { useCallback } from "react"
 import { useAudioStore } from "@/stores"
-import { useTauriEvent } from "./use-tauri-event"
-import type { DeviceInfo, AudioLevel } from "@/types"
+import type { DeviceInfo } from "@/types"
 
 export function useAudio() {
   const store = useAudioStore()
 
-  useTauriEvent<AudioLevel>("audio_level", (level) => {
-    store.setLevel(level)
-  })
-
-  // TODO: Wire to API in WS-3
   const loadDevices = useCallback(async () => {
-    const devices: DeviceInfo[] = [] // stub
+    const mediaDevices = await navigator.mediaDevices.enumerateDevices()
+    const audioInputs = mediaDevices.filter((d) => d.kind === "audioinput")
+    const devices: DeviceInfo[] = audioInputs.map((d, i) => ({
+      id: d.deviceId,
+      name: d.label || `Microphone ${i + 1}`,
+      sample_rate: 48000, // Browser default
+      channels: 1,
+      is_default: d.deviceId === "default",
+    }))
     store.setDevices(devices)
     return devices
   }, [store])
 
-  // TODO: Wire to API in WS-3
+  // Stub — Web Audio capture will be implemented in WS-7
   const startCapture = useCallback(
     async (_deviceId?: string | null) => {
       store.setCapturing(true)
     },
-    [store]
+    [store],
   )
 
-  // TODO: Wire to API in WS-3
+  // Stub — Web Audio capture will be implemented in WS-7
   const stopCapture = useCallback(async () => {
     store.setCapturing(false)
     store.setLevel({ rms: 0, peak: 0 })
   }, [store])
 
-  // TODO: Wire to API in WS-3
   const setGain = useCallback(
     async (gain: number) => {
       store.setGain(gain)
     },
-    [store]
+    [store],
   )
 
   return {

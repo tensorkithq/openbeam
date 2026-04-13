@@ -1,62 +1,64 @@
 import { useBibleStore } from "@/stores"
-import type { Translation, Book, Verse, CrossReference } from "@/types"
-import type { SemanticSearchResult } from "@/types/detection"
-
-// TODO: Wire to API in WS-3
+import { api } from "@/services"
+import type { Verse } from "@/types"
 
 async function loadTranslations() {
-  const translations: Translation[] = [] // stub
+  const translations = await api.listTranslations()
   useBibleStore.getState().setTranslations(translations)
   return translations
 }
 
-async function loadBooks(_translationId?: number) {
-  const books: Book[] = [] // stub
+async function loadBooks(translationId?: number) {
+  const tid = translationId ?? useBibleStore.getState().activeTranslationId
+  const books = await api.listBooks(tid)
   useBibleStore.getState().setBooks(books)
   return books
 }
 
 async function loadChapter(
-  _bookNumber: number,
-  _chapter: number,
-  _translationId?: number
+  bookNumber: number,
+  chapter: number,
+  translationId?: number,
 ) {
-  const verses: Verse[] = [] // stub
+  const tid = translationId ?? useBibleStore.getState().activeTranslationId
+  const verses = await api.getChapter(tid, bookNumber, chapter)
   useBibleStore.getState().setCurrentChapter(verses)
   return verses
 }
 
 async function fetchVerse(
-  _bookNumber: number,
-  _chapter: number,
-  _verse: number,
-  _translationId?: number
+  bookNumber: number,
+  chapter: number,
+  verse: number,
+  translationId?: number,
 ): Promise<Verse | null> {
-  return null // stub
+  const tid = translationId ?? useBibleStore.getState().activeTranslationId
+  return api.getVerse(tid, bookNumber, chapter, verse)
 }
 
 async function searchVerses(
-  _query: string,
-  _limit = 20,
-  _translationId?: number
+  query: string,
+  limit = 20,
+  translationId?: number,
 ) {
-  const results: Verse[] = [] // stub
+  const tid = translationId ?? useBibleStore.getState().activeTranslationId
+  const results = await api.searchVerses(query, tid, limit)
   useBibleStore.getState().setSearchResults(results)
   return results
 }
 
-async function semanticSearch(_query: string, _limit = 10) {
-  const results: SemanticSearchResult[] = [] // stub
+async function semanticSearch(query: string, limit = 10) {
+  const results = await api.semanticSearch(query, limit)
   useBibleStore.getState().setSemanticResults(results)
   return results
 }
 
 async function loadCrossReferences(
-  _bookNumber: number,
-  _chapter: number,
-  _verse: number
+  bookNumber: number,
+  chapter: number,
+  verse: number,
 ) {
-  const refs: CrossReference[] = [] // stub
+  const refs = await api.getCrossReferences(bookNumber, chapter, verse)
   useBibleStore.getState().setCrossReferences(refs)
   return refs
 }
