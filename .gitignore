@@ -1,5 +1,6 @@
 node_modules/
 dist/
+build/
 target/
 .env
 .env.local
@@ -8,3 +9,4 @@ target/
 .DS_Store
 .idea/
 *.log
+pnpm-lock.yaml
