@@ -6,33 +6,21 @@ import {
   StreamOrchestrator,
   type RemoteCommand,
 } from "@openbeam/streams"
-import {
-  transcriptionSocket,
-  detectionSocket,
-  remoteSocket,
-  api,
-} from "@/services"
+import { api } from "@/services"
 import { useTranscriptStore } from "@/stores/transcript-store"
 import { useDetectionStore } from "@/stores/detection-store"
 import { useBroadcastStore } from "@/stores/broadcast-store"
 import { useQueueStore } from "@/stores/queue-store"
 import { useSettingsStore } from "@/stores/settings-store"
 import { navigateNext, navigatePrev } from "@/hooks/use-remote-control"
+import { createConnectionManager, type ConnectionManager } from "./connection-manager"
 
-// Create stream instances (cold until subscribed)
-export const transcriptionStreams = createTranscriptionStream({
-  socket: transcriptionSocket,
-})
+let manager: ConnectionManager | null = null
 
-export const detectionStreams = createDetectionStream({
-  transcriptFinals$: transcriptionStreams.finals$,
-  socket: detectionSocket,
-  forwardSocket: detectionSocket,
-})
-
-const remoteControlStreams = createRemoteControlStream({
-  socket: remoteSocket,
-})
+export function getManager(): ConnectionManager {
+  if (!manager) throw new Error("Streams not initialized — call initializeStreams() first")
+  return manager
+}
 
 function dispatchRemoteCommand(cmd: RemoteCommand) {
   switch (cmd.type) {
@@ -72,6 +60,28 @@ function dispatchRemoteCommand(cmd: RemoteCommand) {
  * Returns a cleanup function.
  */
 export function initializeStreams(): () => void {
+  manager = createConnectionManager({
+    transcription: "/ws/transcription",
+    detection: "/ws/detection",
+    overlay: "/ws/overlay?role=dashboard",
+    remote: "/ws/remote",
+  })
+
+  // Create stream instances (cold until subscribed)
+  const transcriptionStreams = createTranscriptionStream({
+    socket: manager.transcription,
+  })
+
+  const detectionStreams = createDetectionStream({
+    transcriptFinals$: transcriptionStreams.finals$,
+    socket: manager.detection,
+    forwardSocket: manager.detection,
+  })
+
+  const remoteControlStreams = createRemoteControlStream({
+    socket: manager.remote,
+  })
+
   const orchestrator = new StreamOrchestrator()
 
   // Transcription → transcript store
@@ -92,7 +102,7 @@ export function initializeStreams(): () => void {
   )
 
   // Detection → detection store
-  detectionSocket.connect()
+  manager.connectAll()
   orchestrator.add(
     detectionStreams.detections$.subscribe((results) => {
       useDetectionStore.getState().addDetections(results)
@@ -103,7 +113,6 @@ export function initializeStreams(): () => void {
   }
 
   // Remote control → dispatch commands
-  remoteSocket.connect()
   orchestrator.add(
     remoteControlStreams.commands$.subscribe(dispatchRemoteCommand),
   )
@@ -130,11 +139,9 @@ export function initializeStreams(): () => void {
   orchestrator.add(statusSync.subscription)
   orchestrator.addTeardown(statusSync.destroy)
 
-  // Cleanup: disconnect sockets on teardown
-  orchestrator.addTeardown(() => {
-    detectionSocket.disconnect()
-    remoteSocket.disconnect()
-  })
-
-  return () => orchestrator.destroy()
+  return () => {
+    orchestrator.destroy()
+    manager?.disconnectAll()
+    manager = null
+  }
 }
