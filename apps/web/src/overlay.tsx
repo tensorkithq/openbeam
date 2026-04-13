@@ -158,6 +158,24 @@ function BroadcastCanvas() {
           Waiting for connection...
         </div>
       )}
+      {sessionId === "default" && (
+        <div style={{
+          position: "fixed",
+          top: 12,
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "rgba(234,179,8,0.9)",
+          color: "#000",
+          fontSize: 11,
+          fontFamily: "system-ui",
+          fontWeight: 600,
+          padding: "4px 12px",
+          pointerEvents: "none",
+          whiteSpace: "nowrap",
+        }}>
+          Shared channel — use your overlay URL from settings for a private session
+        </div>
+      )}
     </>
   )
 }
