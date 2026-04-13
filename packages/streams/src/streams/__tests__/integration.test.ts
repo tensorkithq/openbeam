@@ -277,6 +277,62 @@ describe("search stream integration", () => {
 
     sub.unsubscribe()
   })
+
+  it("does not re-emit empty results on repeated short keystrokes", async () => {
+    const query$ = new Subject<string>()
+    const translationId$ = new BehaviorSubject(1)
+
+    const { results$ } = createSearchStream({
+      query$,
+      translationId$,
+      fuseSearch: vi.fn().mockResolvedValue([]),
+      ftsSearch: vi.fn().mockResolvedValue([]),
+      debounceMs: 10,
+      minQueryLength: 5,
+    })
+
+    const emissions: unknown[] = []
+    const sub = results$.subscribe((r) => emissions.push(r))
+
+    // Multiple short keystrokes — should only emit [] once
+    query$.next("hi")
+    query$.next("hel")
+    query$.next("he")
+    query$.next("h")
+
+    await new Promise((r) => setTimeout(r, 30))
+
+    expect(emissions).toHaveLength(1)
+    expect(emissions[0]).toEqual([])
+
+    sub.unsubscribe()
+  })
+
+  it("does not double-search when translationId replays", async () => {
+    const query$ = new Subject<string>()
+    const translationId$ = new BehaviorSubject(1)
+    const fuseSpy = vi.fn().mockResolvedValue([
+      { verse_ref: "Gen 1:1", verse_text: "In the beginning", book_name: "Genesis", book_number: 1, chapter: 1, verse: 1, similarity: 0.9 },
+    ])
+
+    const { results$ } = createSearchStream({
+      query$,
+      translationId$,
+      fuseSearch: fuseSpy,
+      ftsSearch: vi.fn().mockResolvedValue([]),
+      debounceMs: 20,
+    })
+
+    const sub = results$.subscribe(() => {})
+
+    query$.next("in the beginning")
+    await new Promise((r) => setTimeout(r, 50))
+
+    // Should only call fuse once, not twice from BehaviorSubject replay
+    expect(fuseSpy).toHaveBeenCalledTimes(1)
+
+    sub.unsubscribe()
+  })
 })
 
 describe("remote control stream", () => {
