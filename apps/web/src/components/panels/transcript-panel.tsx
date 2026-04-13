@@ -2,21 +2,13 @@ import { useEffect, useRef, useState } from "react"
 import { PanelHeader } from "@/components/ui/panel-header"
 import { LevelMeter } from "@/components/ui/level-meter"
 import { Button } from "@/components/ui/button"
-import { ApiKeyPrompt } from "@/components/ui/api-key-prompt"
 import { MicIcon, MicOffIcon } from "lucide-react"
 import { toast } from "sonner"
 import {
   useTranscriptStore,
   useAudioStore,
-  useDetectionStore,
-  useQueueStore,
-  useBibleStore,
 } from "@/stores"
 import { useTranscription } from "@/hooks/use-transcription"
-import { useTauriEvent } from "@/hooks/use-tauri-event"
-import { bibleActions } from "@/hooks/use-bible"
-import type { TranscriptSegment } from "@/types"
-import type { DetectionResult } from "@/types"
 
 export function TranscriptPanel() {
   const segments = useTranscriptStore((s) => s.segments)
@@ -26,102 +18,7 @@ export function TranscriptPanel() {
   const audioLevel = useAudioStore((s) => s.level)
   const { startTranscription, stopTranscription } = useTranscription()
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [showKeyPrompt, setShowKeyPrompt] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
-
-  // TODO: Wire to WebSocket in WS-3
-  useTauriEvent<{ rms: number; peak: number }>("audio_level", (payload) => {
-    useAudioStore.getState().setLevel(payload)
-  })
-
-  useTauriEvent("stt_connected", () => {
-    useTranscriptStore.getState().setConnectionStatus("connected")
-  })
-  useTauriEvent("stt_disconnected", () => {
-    useTranscriptStore.getState().setConnectionStatus("disconnected")
-  })
-  useTauriEvent<string>("stt_error", () => {
-    useTranscriptStore.getState().setConnectionStatus("error")
-  })
-
-  useTauriEvent<{ text: string; is_final: boolean; confidence: number }>(
-    "transcript_partial",
-    (payload) => {
-      useTranscriptStore.getState().setPartial(payload.text)
-    }
-  )
-
-  useTauriEvent<{ text: string; is_final: boolean; confidence: number }>(
-    "transcript_final",
-    (payload) => {
-      const segment: TranscriptSegment = {
-        id: crypto.randomUUID(),
-        text: payload.text,
-        is_final: true,
-        confidence: payload.confidence,
-        words: [],
-        timestamp: Date.now(),
-      }
-      useTranscriptStore.getState().addSegment(segment)
-    }
-  )
-
-  useTauriEvent<{ abbreviation: string; translation_id: number }>(
-    "translation_command",
-    (data) => {
-      useBibleStore.getState().setActiveTranslation(data.translation_id)
-      console.log(`[VOICE] Translation switched to ${data.abbreviation}`)
-    }
-  )
-
-  useTauriEvent<DetectionResult[]>("verse_detections", (detections) => {
-    useDetectionStore.getState().addDetections(detections)
-
-    const directHit = detections.find(
-      (d) => d.source === "direct" || d.source === "contextual" || (d.source === "quotation" && d.auto_queued)
-    )
-    if (directHit && directHit.book_number > 0) {
-      bibleActions.selectVerse({
-        id: 0,
-        translation_id: useBibleStore.getState().activeTranslationId,
-        book_number: directHit.book_number,
-        book_name: directHit.book_name,
-        book_abbreviation: "",
-        chapter: directHit.chapter,
-        verse: directHit.verse,
-        text: directHit.verse_text,
-      })
-      useBibleStore
-        .getState()
-        .setPendingNavigation({
-          bookNumber: directHit.book_number,
-          chapter: directHit.chapter,
-          verse: directHit.verse,
-        })
-    }
-
-    for (const d of detections) {
-      if (d.auto_queued) {
-        useQueueStore.getState().addItem({
-          id: crypto.randomUUID(),
-          verse: {
-            id: 0,
-            translation_id: 1,
-            book_number: d.book_number,
-            book_name: d.book_name,
-            book_abbreviation: "",
-            chapter: d.chapter,
-            verse: d.verse,
-            text: d.verse_text,
-          },
-          reference: d.verse_ref,
-          confidence: d.confidence,
-          source: d.source === "direct" ? "ai-direct" : "ai-semantic",
-          added_at: Date.now(),
-        })
-      }
-    }
-  })
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -144,7 +41,7 @@ export function TranscriptPanel() {
       } else if (err.name === "NotFoundError") {
         toast.error("No microphone found")
       } else if (String(err).includes("No Deepgram API key")) {
-        setShowKeyPrompt(true)
+        toast.error("No Deepgram API key configured. Add one in Settings.")
       } else {
         toast.error("Failed to start transcription")
       }
@@ -247,12 +144,6 @@ export function TranscriptPanel() {
         )}
       </div>
 
-      <ApiKeyPrompt
-        open={showKeyPrompt}
-        onOpenChange={setShowKeyPrompt}
-        service="Deepgram"
-        description="Live transcription needs a Deepgram API key. Add it in settings so the app can start listening."
-      />
     </div>
   )
 }
