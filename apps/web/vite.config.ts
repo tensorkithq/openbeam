@@ -14,7 +14,7 @@ export default defineConfig({
   server: {
     port: 3000,
     strictPort: true,
-    allowedHosts: ["openbeam.tensorkit.net", "localhost"],
+    allowedHosts: ["openbeam.tensorkit.ai", "localhost"],
     proxy: {
       "/api": "http://localhost:4001",
       "/ws": { target: "ws://localhost:4001", ws: true },
