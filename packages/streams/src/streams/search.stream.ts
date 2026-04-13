@@ -72,7 +72,11 @@ export function createSearchStream(config: SearchStreamConfig): SearchStreams {
   const input$ = combineLatest([
     query$.pipe(map((q) => q.trim())),
     translationId$.pipe(distinctUntilChanged()),
-  ])
+  ]).pipe(
+    distinctUntilChanged(
+      (prev, curr) => prev[0] === curr[0] && prev[1] === curr[1],
+    ),
+  )
 
   const searched$ = input$.pipe(
     filter(([query]) => query.length >= minQueryLength),
@@ -111,7 +115,8 @@ export function createSearchStream(config: SearchStreamConfig): SearchStreams {
     map((q) => q.trim()),
     filter((q) => q.length < minQueryLength),
     tap(() => isSearching$.next(false)),
-    map((): SemanticSearchResult[] => []),
+    map((): SemanticSearchResult[] => EMPTY),
+    distinctUntilChanged(),
   )
 
   const results$ = merge(searched$, cleared$)
