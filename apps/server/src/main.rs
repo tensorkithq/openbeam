@@ -91,6 +91,8 @@ async fn main() {
     // Build quotation matcher from Bible database
     let quotation_matcher = build_quotation_matcher(&bible_db);
 
+    let broadcast_relay = Arc::new(routes::BroadcastRelay::new());
+
     let app_state = Arc::new(AppState {
         detection_pipeline: tokio::sync::Mutex::new(pipeline),
         quotation_matcher: tokio::sync::Mutex::new(quotation_matcher),
@@ -111,6 +113,12 @@ async fn main() {
         // STT proxy (stateless — no shared state needed, each connection is independent)
         .route("/ws/transcription", get(routes::stt::ws_transcription))
         .route("/api/transcription/status", get(routes::stt::transcription_status))
+        // Overlay relay (own state — BroadcastRelay, not AppState)
+        .merge(
+            Router::new()
+                .route("/ws/overlay", get(routes::overlay::ws_overlay))
+                .with_state(broadcast_relay),
+        )
         .layer(CorsLayer::permissive());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();

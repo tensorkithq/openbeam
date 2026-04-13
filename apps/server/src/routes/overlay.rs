@@ -82,8 +82,9 @@ async fn handle_overlay_client(mut socket: WebSocket, relay: Arc<BroadcastRelay>
     tracing::info!("overlay: client connected");
 
     // Send cached state on connect
-    if let Some(cached) = relay.state_rx.borrow().as_ref() {
-        let _ = socket.send(Message::Text(cached.clone().into())).await;
+    let cached = relay.state_rx.borrow().clone();
+    if let Some(msg) = cached {
+        let _ = socket.send(Message::Text(msg.into())).await;
     }
 
     let mut rx = relay.tx.subscribe();
@@ -96,8 +97,9 @@ async fn handle_overlay_client(mut socket: WebSocket, relay: Arc<BroadcastRelay>
                         if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&*text) {
                             let msg_type = parsed.get("type").and_then(|v| v.as_str()).unwrap_or("");
                             if msg_type == "overlay:ready" {
-                                if let Some(cached) = relay.state_rx.borrow().as_ref() {
-                                    if socket.send(Message::Text(cached.clone().into())).await.is_err() {
+                                let cached = relay.state_rx.borrow().clone();
+                                if let Some(msg) = cached {
+                                    if socket.send(Message::Text(msg.into())).await.is_err() {
                                         break;
                                     }
                                 }
