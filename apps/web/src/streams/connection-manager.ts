@@ -5,6 +5,7 @@ export interface ConnectionManagerConfig {
   detection: string
   overlay: string
   remote: string
+  sessionId: string
 }
 
 export interface ConnectionManager {
@@ -19,8 +20,10 @@ export interface ConnectionManager {
 export function createConnectionManager(config: ConnectionManagerConfig): ConnectionManager {
   const transcription = new OpenBeamSocket(config.transcription)
   const detection = new OpenBeamSocket(config.detection)
-  const overlay = new OpenBeamSocket(config.overlay)
-  const remote = new OpenBeamSocket(config.remote)
+  const overlay = new OpenBeamSocket(
+    `${config.overlay}${config.overlay.includes('?') ? '&' : '?'}session=${config.sessionId}`
+  )
+  const remote = new OpenBeamSocket(`${config.remote}?session=${config.sessionId}`)
 
   return {
     transcription,
