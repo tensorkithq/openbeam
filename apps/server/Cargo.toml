@@ -19,7 +19,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-rhema-bible = { path = "crates/bible" }
-rhema-detection = { path = "crates/detection", features = ["vector-search", "api-embedder"] }
+openbeam-bible = { path = "crates/bible" }
+openbeam-detection = { path = "crates/detection", features = ["vector-search", "api-embedder"] }
 openbeam-stt = { path = "crates/stt" }
 openbeam-api = { path = "crates/api" }

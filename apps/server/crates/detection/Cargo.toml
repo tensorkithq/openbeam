@@ -1,5 +1,5 @@
 [package]
-name = "rhema-detection"
+name = "openbeam-detection"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,7 +10,7 @@ tracing = "0.1"
 thiserror = "2"
 aho-corasick = "1"
 lru = "0.12"
-rhema-bible = { path = "../bible" }
+openbeam-bible = { path = "../bible" }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"], optional = true }
 tokio = { version = "1", features = ["rt"], optional = true }
 

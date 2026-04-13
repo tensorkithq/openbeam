@@ -3,9 +3,9 @@ mod routes;
 mod state;
 
 use axum::{extract::State, routing::{get, post}, Json, Router};
-use rhema_bible::BibleDb;
-use rhema_detection::semantic::index::VectorIndex;
-use rhema_detection::{DetectionPipeline, QuotationMatcher, SemanticDetector};
+use openbeam_bible::BibleDb;
+use openbeam_detection::semantic::index::VectorIndex;
+use openbeam_detection::{DetectionPipeline, QuotationMatcher, SemanticDetector};
 use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -204,11 +204,11 @@ async fn health(State(state): State<Arc<AppState>>) -> Json<Value> {
 /// Try to load a semantic detector with the stub embedder and HNSW index.
 fn try_load_semantic(embeddings_path: &Path, ids_path: &Path) -> Option<SemanticDetector> {
     let dim = 4096; // Default for Qwen3 embeddings
-    match rhema_detection::HnswVectorIndex::load(embeddings_path, ids_path, dim) {
+    match openbeam_detection::HnswVectorIndex::load(embeddings_path, ids_path, dim) {
         Ok(index) => {
             tracing::info!("Vector index loaded: {} vectors", index.len());
             Some(SemanticDetector::new(
-                Box::new(rhema_detection::semantic::embedder::StubEmbedder::new(dim)),
+                Box::new(openbeam_detection::semantic::embedder::StubEmbedder::new(dim)),
                 Box::new(index),
             ))
         }
@@ -227,10 +227,10 @@ fn try_load_semantic_with_api(
     model: String,
     dimension: usize,
 ) -> Option<SemanticDetector> {
-    match rhema_detection::HnswVectorIndex::load(embeddings_path, ids_path, dimension) {
+    match openbeam_detection::HnswVectorIndex::load(embeddings_path, ids_path, dimension) {
         Ok(index) => {
             tracing::info!("Vector index loaded with API embedder: {} vectors", index.len());
-            let embedder = rhema_detection::ApiEmbedder::new(api_key, model, dimension);
+            let embedder = openbeam_detection::ApiEmbedder::new(api_key, model, dimension);
             Some(SemanticDetector::new(
                 Box::new(embedder),
                 Box::new(index),

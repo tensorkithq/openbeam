@@ -5,7 +5,7 @@ use axum::{
     },
     response::IntoResponse,
 };
-use rhema_detection::{SentenceBuffer, SermonContext};
+use openbeam_detection::{SentenceBuffer, SermonContext};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -121,19 +121,19 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                 .iter()
                 .map(|m| {
                     let source = match &m.detection.source {
-                        rhema_detection::DetectionSource::DirectReference => {
+                        openbeam_detection::DetectionSource::DirectReference => {
                             "direct".to_string()
                         }
-                        rhema_detection::DetectionSource::Contextual => {
+                        openbeam_detection::DetectionSource::Contextual => {
                             "contextual".to_string()
                         }
-                        rhema_detection::DetectionSource::QuotationMatch { similarity } => {
+                        openbeam_detection::DetectionSource::QuotationMatch { similarity } => {
                             format!("quotation:{similarity:.2}")
                         }
-                        rhema_detection::DetectionSource::SemanticLocal { similarity } => {
+                        openbeam_detection::DetectionSource::SemanticLocal { similarity } => {
                             format!("semantic_local:{similarity:.2}")
                         }
-                        rhema_detection::DetectionSource::SemanticCloud { similarity } => {
+                        openbeam_detection::DetectionSource::SemanticCloud { similarity } => {
                             format!("semantic_cloud:{similarity:.2}")
                         }
                         other => format!("{other:?}"),

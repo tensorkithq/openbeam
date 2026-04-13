@@ -5,7 +5,7 @@ use axum::{
     routing::get,
     Json, Router,
 };
-use rhema_bible::{BibleDb, BibleError, SearchVerse};
+use openbeam_bible::{BibleDb, BibleError, SearchVerse};
 use serde::Deserialize;
 use std::sync::Arc;
 

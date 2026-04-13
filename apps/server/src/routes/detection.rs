@@ -4,7 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use rhema_detection::MergedDetection;
+use openbeam_detection::MergedDetection;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -55,15 +55,15 @@ pub struct DetectionStatus {
 
 fn merged_to_result(m: &MergedDetection) -> DetectionResult {
     let source = match &m.detection.source {
-        rhema_detection::DetectionSource::DirectReference => "direct".to_string(),
-        rhema_detection::DetectionSource::Contextual => "contextual".to_string(),
-        rhema_detection::DetectionSource::QuotationMatch { similarity } => {
+        openbeam_detection::DetectionSource::DirectReference => "direct".to_string(),
+        openbeam_detection::DetectionSource::Contextual => "contextual".to_string(),
+        openbeam_detection::DetectionSource::QuotationMatch { similarity } => {
             format!("quotation:{similarity:.2}")
         }
-        rhema_detection::DetectionSource::SemanticLocal { similarity } => {
+        openbeam_detection::DetectionSource::SemanticLocal { similarity } => {
             format!("semantic_local:{similarity:.2}")
         }
-        rhema_detection::DetectionSource::SemanticCloud { similarity } => {
+        openbeam_detection::DetectionSource::SemanticCloud { similarity } => {
             format!("semantic_cloud:{similarity:.2}")
         }
         other => format!("{other:?}"),
@@ -124,7 +124,7 @@ pub async fn quotation_search(
         .iter()
         .map(|d| {
             let source = match &d.source {
-                rhema_detection::DetectionSource::QuotationMatch { similarity } => {
+                openbeam_detection::DetectionSource::QuotationMatch { similarity } => {
                     format!("quotation:{similarity:.2}")
                 }
                 other => format!("{other:?}"),

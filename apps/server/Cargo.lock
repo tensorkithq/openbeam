@@ -747,8 +747,8 @@ dependencies = [
  "axum",
  "openbeam-api",
  "openbeam-stt",
- "rhema-bible",
- "rhema-detection",
+ "openbeam-bible",
+ "openbeam-detection",
  "serde",
  "serde_json",
  "tokio",
@@ -1009,7 +1009,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rhema-bible"
+name = "openbeam-bible"
 version = "0.1.0"
 dependencies = [
  "rusqlite",
@@ -1019,13 +1019,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "rhema-detection"
+name = "openbeam-detection"
 version = "0.1.0"
 dependencies = [
  "aho-corasick",
  "lru",
  "reqwest",
- "rhema-bible",
+ "openbeam-bible",
  "serde",
  "serde_json",
  "thiserror",

@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use rhema_bible::QuotationVerse;
+use openbeam_bible::QuotationVerse;
 
 use crate::types::{Detection, DetectionSource, VerseRef};
 

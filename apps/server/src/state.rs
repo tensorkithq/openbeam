@@ -1,4 +1,4 @@
-use rhema_detection::{DetectionPipeline, QuotationMatcher};
+use openbeam_detection::{DetectionPipeline, QuotationMatcher};
 use tokio::sync::Mutex;
 
 /// Shared application state for the OpenBeam server.
