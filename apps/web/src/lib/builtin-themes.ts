@@ -175,7 +175,7 @@ const BROADCAST_OVERLAY: BroadcastTheme = {
     enabled: true,
     color: "#000000",
     opacity: 0.7,
-    borderRadius: 12,
+    borderRadius: 0,
     padding: 24,
   },
   verseText: {
