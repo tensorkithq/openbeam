@@ -1,8 +1,10 @@
 import { create } from "zustand"
+import { createId } from "@paralleldrive/cuid2"
 
 const STORAGE_KEY = "openbeam:settings"
 
 interface SettingsState {
+  sessionId: string
   deepgramApiKey: string | null
   activeTranslationId: number
   audioDeviceId: string | null
@@ -37,6 +39,7 @@ function persistToStorage(state: SettingsState) {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
+        sessionId: state.sessionId,
         deepgramApiKey: state.deepgramApiKey,
         activeTranslationId: state.activeTranslationId,
         audioDeviceId: state.audioDeviceId,
@@ -55,6 +58,7 @@ function persistToStorage(state: SettingsState) {
 const persisted = loadFromStorage()
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
+  sessionId: persisted.sessionId ?? createId(),
   deepgramApiKey: persisted.deepgramApiKey ?? null,
   activeTranslationId: persisted.activeTranslationId ?? 1,
   audioDeviceId: persisted.audioDeviceId ?? null,

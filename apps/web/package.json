@@ -21,6 +21,7 @@
     "@fontsource-variable/source-serif-4": "^5.2.9",
     "@fontsource/geist-mono": "^5.2.7",
     "@openbeam/streams": "workspace:*",
+    "@paralleldrive/cuid2": "^3.3.0",
     "@tailwindcss/vite": "^4.2.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
