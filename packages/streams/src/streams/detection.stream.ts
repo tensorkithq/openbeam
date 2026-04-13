@@ -33,7 +33,8 @@ export function createDetectionStream(
   let forwardSub: Subscription | null = null
   if (forwardSocket) {
     forwardSub = transcriptFinals$.subscribe((segment) => {
-      forwardSocket.send("transcript:final", { text: segment.text })
+      const msgType = segment.speech_final ? "transcript:speech_final" : "transcript:final"
+      forwardSocket.send(msgType, { text: segment.text })
     })
   }
 

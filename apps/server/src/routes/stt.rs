@@ -164,12 +164,13 @@ fn event_to_json(event: &TranscriptEvent) -> Option<Value> {
             transcript,
             words,
             confidence,
-            speech_final: _,
+            speech_final,
         } => Some(json!({
             "type": "transcript:final",
             "text": transcript,
             "words": words_to_json(words),
             "confidence": confidence,
+            "speech_final": speech_final,
         })),
         TranscriptEvent::UtteranceEnd => Some(json!({
             "type": "transcript:utterance_end",

@@ -1,5 +1,5 @@
 import { merge, type Observable } from "rxjs"
-import { distinctUntilChanged, map, share, shareReplay, startWith } from "rxjs/operators"
+import { distinctUntilChanged, filter, map, share, shareReplay, startWith } from "rxjs/operators"
 import type { SocketLike } from "../socket/socket-like"
 import type { ConnectionStatus } from "../types/socket"
 import type { TranscriptSegment, Word } from "../types/transcript"
@@ -14,6 +14,8 @@ export interface TranscriptionStreams {
   partials$: Observable<{ text: string }>
   /** Finalized transcript segments with confidence and word timings. */
   finals$: Observable<TranscriptSegment>
+  /** Finals where Deepgram signaled end-of-speech turn. */
+  speechFinals$: Observable<TranscriptSegment>
   /** WebSocket connection lifecycle. */
   connectionStatus$: Observable<ConnectionStatus>
   /** Transcription errors from the server. */
@@ -34,6 +36,7 @@ export function createTranscriptionStream(
     text: string
     confidence: number
     words: Word[]
+    speech_final?: boolean
   }>(socket, "transcript:final").pipe(
     map(
       (payload): TranscriptSegment => ({
@@ -43,9 +46,14 @@ export function createTranscriptionStream(
         confidence: payload.confidence,
         words: payload.words ?? [],
         timestamp: Date.now(),
+        speech_final: payload.speech_final,
       }),
     ),
     share(),
+  )
+
+  const speechFinals$ = finals$.pipe(
+    filter((segment) => segment.speech_final === true),
   )
 
   const connectionStatus$ = merge(
@@ -69,5 +77,5 @@ export function createTranscriptionStream(
     "transcript:error",
   )
 
-  return { partials$, finals$, connectionStatus$, errors$ }
+  return { partials$, finals$, speechFinals$, connectionStatus$, errors$ }
 }

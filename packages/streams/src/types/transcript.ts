@@ -13,6 +13,7 @@ export interface TranscriptSegment {
   confidence: number
   words: Word[]
   timestamp: number
+  speech_final?: boolean
 }
 
 export type TranscriptEventPayload =
