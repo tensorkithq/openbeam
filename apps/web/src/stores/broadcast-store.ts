@@ -3,8 +3,38 @@ import type { BroadcastTheme, VerseRenderData } from "@/types"
 import { BUILTIN_THEMES } from "@/lib/builtin-themes"
 import { overlaySocket } from "@/services"
 
+const THEMES_KEY = "openbeam:themes"
+
 function emitTo(label: string, _event: string, payload: unknown) {
   overlaySocket.send("verse:update", { label, ...(payload as Record<string, unknown>) })
+}
+
+function loadThemesFromStorage(): BroadcastTheme[] {
+  try {
+    const raw = localStorage.getItem(THEMES_KEY)
+    if (raw) {
+      const custom = JSON.parse(raw) as BroadcastTheme[]
+      // Merge: always use fresh builtins + persisted custom themes
+      const customIds = new Set(custom.map((t) => t.id))
+      return [
+        ...BUILTIN_THEMES,
+        ...custom.filter((t) => !t.builtin && !BUILTIN_THEMES.some((b) => b.id === t.id)),
+      ]
+    }
+  } catch {
+    // ignore corrupt storage
+  }
+  return [...BUILTIN_THEMES]
+}
+
+function persistThemes(themes: BroadcastTheme[]) {
+  try {
+    // Only persist custom (non-builtin) themes — builtins are always loaded fresh
+    const custom = themes.filter((t) => !t.builtin)
+    localStorage.setItem(THEMES_KEY, JSON.stringify(custom))
+  } catch {
+    // ignore storage errors
+  }
 }
 
 type SelectedElement = "verse" | "reference" | null
@@ -74,8 +104,10 @@ function setNestedValue(obj: Record<string, unknown>, path: string, value: unkno
   return result
 }
 
+const initialThemes = loadThemesFromStorage()
+
 export const useBroadcastStore = create<BroadcastState>((set, get) => ({
-  themes: [...BUILTIN_THEMES],
+  themes: initialThemes,
   activeThemeId: BUILTIN_THEMES[0].id,
   altActiveThemeId: BUILTIN_THEMES[0].id,
   isLive: false,
@@ -86,16 +118,25 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
   selectedElement: null,
 
   loadThemes: () => {
-    set({ themes: [...BUILTIN_THEMES] })
+    const themes = loadThemesFromStorage()
+    set({ themes })
   },
-  saveTheme: (theme) =>
-    set((s) => ({
-      themes: s.themes.some((t) => t.id === theme.id)
+  saveTheme: (theme) => {
+    set((s) => {
+      const themes = s.themes.some((t) => t.id === theme.id)
         ? s.themes.map((t) => (t.id === theme.id ? theme : t))
-        : [...s.themes, theme],
-    })),
-  deleteTheme: (id) =>
-    set((s) => ({ themes: s.themes.filter((t) => t.id !== id || t.builtin) })),
+        : [...s.themes, theme]
+      persistThemes(themes)
+      return { themes }
+    })
+  },
+  deleteTheme: (id) => {
+    set((s) => {
+      const themes = s.themes.filter((t) => t.id !== id || t.builtin)
+      persistThemes(themes)
+      return { themes }
+    })
+  },
   duplicateTheme: (id) => {
     const s = get()
     const source = s.themes.find((t) => t.id === id)
@@ -109,7 +150,11 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }
-    set((s) => ({ themes: [...s.themes, newTheme] }))
+    set((s) => {
+      const themes = [...s.themes, newTheme]
+      persistThemes(themes)
+      return { themes }
+    })
   },
   syncBroadcastOutputFor: (outputId: string) => {
     const s = get()
@@ -180,12 +225,16 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
         createdAt: Date.now(),
         updatedAt: Date.now(),
       }
-      set((s) => ({
-        themes: [...s.themes, customTheme],
-        activeThemeId: customTheme.id,
-        editingThemeId: customTheme.id,
-        draftTheme: customTheme,
-      }))
+      set((s) => {
+        const themes = [...s.themes, customTheme]
+        persistThemes(themes)
+        return {
+          themes,
+          activeThemeId: customTheme.id,
+          editingThemeId: customTheme.id,
+          draftTheme: customTheme,
+        }
+      })
     } else {
       get().saveTheme(draftTheme)
     }
