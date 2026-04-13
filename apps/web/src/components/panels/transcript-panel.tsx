@@ -4,14 +4,15 @@ import { LevelMeter } from "@/components/ui/level-meter"
 import { Button } from "@/components/ui/button"
 import { ApiKeyPrompt } from "@/components/ui/api-key-prompt"
 import { MicIcon, MicOffIcon } from "lucide-react"
+import { toast } from "sonner"
 import {
   useTranscriptStore,
   useAudioStore,
-  useSettingsStore,
   useDetectionStore,
   useQueueStore,
   useBibleStore,
 } from "@/stores"
+import { useTranscription } from "@/hooks/use-transcription"
 import { useTauriEvent } from "@/hooks/use-tauri-event"
 import { bibleActions } from "@/hooks/use-bible"
 import type { TranscriptSegment } from "@/types"
@@ -23,9 +24,10 @@ export function TranscriptPanel() {
   const isTranscribing = useTranscriptStore((s) => s.isTranscribing)
   const connectionStatus = useTranscriptStore((s) => s.connectionStatus)
   const audioLevel = useAudioStore((s) => s.level)
-  const deepgramApiKey = useSettingsStore((s) => s.deepgramApiKey)
+  const { startTranscription, stopTranscription } = useTranscription()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showKeyPrompt, setShowKeyPrompt] = useState(false)
+  const [isStarting, setIsStarting] = useState(false)
 
   // TODO: Wire to WebSocket in WS-3
   useTauriEvent<{ rms: number; peak: number }>("audio_level", (payload) => {
@@ -128,40 +130,32 @@ export function TranscriptPanel() {
     }
   }, [segments, currentPartial])
 
-  // TODO: Wire to API in WS-3
   const handleStart = async () => {
+    setIsStarting(true)
     try {
-      useTranscriptStore.getState().setConnectionStatus("connecting")
-      const settings = useSettingsStore.getState()
-      const params = {
-        apiKey: settings.sttProvider === "deepgram" ? (deepgramApiKey ?? "") : "",
-        deviceId: settings.audioDeviceId,
-        gain: settings.gain,
-        provider: settings.sttProvider,
-      }
-      console.log("[AUDIO] Starting transcription:", params)
-      // TODO: Wire to API in WS-3
-      console.log("[AUDIO] Transcription started (stub)")
-      useTranscriptStore.getState().setTranscribing(true)
+      await startTranscription()
     } catch (e) {
-      const errorMsg = String(e)
-      console.error("[AUDIO] Failed to start transcription:", errorMsg)
+      const err = e as DOMException | Error
+      console.error("[AUDIO] Failed to start transcription:", err)
       useTranscriptStore.getState().setConnectionStatus("error")
 
-      if (errorMsg.includes("No Deepgram API key")) {
+      if (err.name === "NotAllowedError") {
+        toast.error("Microphone access denied")
+      } else if (err.name === "NotFoundError") {
+        toast.error("No microphone found")
+      } else if (String(err).includes("No Deepgram API key")) {
         setShowKeyPrompt(true)
       } else {
-        alert(errorMsg)
+        toast.error("Failed to start transcription")
       }
+    } finally {
+      setIsStarting(false)
     }
   }
 
-  // TODO: Wire to API in WS-3
   const handleStop = async () => {
     try {
-      useTranscriptStore.getState().setTranscribing(false)
-      useTranscriptStore.getState().setPartial("")
-      useTranscriptStore.getState().setConnectionStatus("disconnected")
+      await stopTranscription()
     } catch (e) {
       console.error("Failed to stop transcription:", e)
     }
@@ -246,9 +240,9 @@ export function TranscriptPanel() {
             Stop transcribing
           </Button>
         ) : (
-          <Button variant="ghost" size="sm" onClick={handleStart}>
+          <Button variant="ghost" size="sm" onClick={handleStart} disabled={isStarting}>
               <MicIcon className="size-3" />
-            Start transcribing
+            {isStarting ? "Requesting mic..." : "Start transcribing"}
           </Button>
         )}
       </div>
