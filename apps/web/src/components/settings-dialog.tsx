@@ -257,7 +257,7 @@ interface TranslationInfo {
 }
 
 function BibleSection() {
-  const [translations, setTranslations] = useState<TranslationInfo[]>([])
+  const [translations, _setTranslations] = useState<TranslationInfo[]>([])
   const [activeId, setActiveId] = useState<number>(1)
   const [loading, setLoading] = useState(true)
 

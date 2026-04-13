@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { getAutocompleteSuggestion, getTabNavigationResult } from "@/lib/quick-search"
 import {
   Select,
@@ -9,19 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 import {
   BookOpenIcon,
@@ -29,7 +15,6 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
   CheckIcon,
-  SearchIcon,
   PlusIcon,
 } from "lucide-react"
 import {
@@ -75,16 +60,15 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
 
 export function SearchPanel() {
   const [activeTab, setActiveTab] = useState<SearchTab>("book")
-  const [bookOpen, setBookOpen] = useState(false)
+  const [_bookOpen, setBookOpen] = useState(false)
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [chapter, setChapter] = useState(1)
   const [selectedVerseId, setSelectedVerseId] = useState<number | null>(null)
-  const [chapterInput, setChapterInput] = useState("")
+  const [_chapterInput, setChapterInput] = useState("")
   const [contextQuery, setContextQuery] = useState("")
 
   // EasyWorship-style autocomplete
   const [quickInput, setQuickInput] = useState("")
-  const [quickSuggestion, setQuickSuggestion] = useState("")
   const [showQuickVerses, setShowQuickVerses] = useState(false)
   const [quickVersesList, setQuickVersesList] = useState<Verse[]>([])
 
@@ -100,6 +84,11 @@ export function SearchPanel() {
     activeTranslationId,
     selectedVerse,
   } = useBible()
+
+  const quickSuggestion = useMemo(
+    () => getAutocompleteSuggestion(quickInput, books).suggestion,
+    [quickInput, books]
+  )
 
   const selectedBookNumber = selectedBook?.book_number
 
@@ -182,7 +171,7 @@ export function SearchPanel() {
     return unsubscribe
   }, [applyNavigationSelection])
 
-  const handleBookSelect = useCallback((book: Book) => {
+  const _handleBookSelect = useCallback((book: Book) => {
     setSelectedBook(book)
     setChapter(1)
     setChapterInput("")
@@ -196,7 +185,7 @@ export function SearchPanel() {
     bibleActions.selectVerse(verse)
   }, [])
 
-  const handleChapterInput = useCallback(
+  const _handleChapterInput = useCallback(
     (value: string) => {
       setChapterInput(value)
       const match = value.match(/^(\d+)(?::(\d+))?$/)
@@ -356,8 +345,6 @@ export function SearchPanel() {
   useEffect(() => {
     const result = getAutocompleteSuggestion(quickInput, books)
 
-    setQuickSuggestion(result.suggestion)
-
     if (result.matchedBook && result.chapter && result.verse) {
       useBibleStore.getState().setPendingNavigation({
         bookNumber: result.matchedBook.book_number,
@@ -386,7 +373,7 @@ export function SearchPanel() {
         setShowQuickVerses(true)
       }).catch(console.error)
     } else {
-      setShowQuickVerses(false)
+      queueMicrotask(() => setShowQuickVerses(false))
     }
   }, [quickInput, books, activeTranslationId])
 
@@ -401,7 +388,6 @@ export function SearchPanel() {
     if (e.key === "Enter") {
       e.preventDefault()
       setQuickInput("")
-      setQuickSuggestion("")
       setShowQuickVerses(false)
       return
     }
@@ -409,7 +395,6 @@ export function SearchPanel() {
     if (e.key === "Escape") {
       e.preventDefault()
       setQuickInput("")
-      setQuickSuggestion("")
       setShowQuickVerses(false)
       return
     }
@@ -422,7 +407,6 @@ export function SearchPanel() {
       verse: verse.verse
     })
     setQuickInput("")
-    setQuickSuggestion("")
     setShowQuickVerses(false)
   }, [])
 
