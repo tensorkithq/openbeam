@@ -58,17 +58,16 @@ export function useTranscription() {
   const startTranscription = useCallback(async () => {
     const settings = useSettingsStore.getState()
 
+    if (!settings.deepgramApiKey) {
+      throw new Error("No Deepgram API key")
+    }
+
     // Start audio capture first — mic data flows via worklet to the socket
     await startCapture(settings.audioDeviceId)
 
     store.setTranscribing(true)
     store.setConnectionStatus("connecting")
-    transcriptionSocket.connect()
-
-    // Send API key so the backend can authenticate with the STT provider
-    if (settings.deepgramApiKey) {
-      transcriptionSocket.send("auth", { apiKey: settings.deepgramApiKey })
-    }
+    transcriptionSocket.connect({ key: settings.deepgramApiKey })
   }, [store, startCapture])
 
   const stopTranscription = useCallback(async () => {
