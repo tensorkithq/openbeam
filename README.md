@@ -20,6 +20,30 @@ OpenBeam uses a multi-strategy detection pipeline to find Bible verses in real-t
 - **Broadcast**: OBS Browser Source overlay
 - **STT**: Deepgram (BYOK — bring your own key)
 
+## Deploy
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/template/XXXXXX?referralCode=openbeam)
+
+Or clone and deploy manually:
+
+```bash
+# Server
+cd apps/server
+OPENROUTER_API_KEY=sk-or-... cargo run --release
+
+# Web (development)
+cd apps/web
+pnpm install && pnpm dev
+```
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `OPENROUTER_API_KEY` | Yes | — | Platform embedding API key |
+| `PORT` | No | 8080 | Server port |
+| `DB_PATH` | No | ./data/rhema.db | Bible database path |
+
 ## Project Structure
 
 ```
