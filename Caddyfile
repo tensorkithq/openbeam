@@ -1,7 +1,0 @@
-openbeam.tensorkit.net {
-	reverse_proxy localhost:4000
-}
-
-openbeam-api.tensorkit.net {
-	reverse_proxy localhost:4001
-}
