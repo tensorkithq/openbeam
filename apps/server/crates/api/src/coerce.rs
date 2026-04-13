@@ -89,38 +89,38 @@ pub fn coerce_string(arg: &OscType) -> Result<String, CommandError> {
 
 /// Parse an OSC address + arguments into a `RemoteCommand`.
 ///
-/// Handles all 8 OSC addresses under the `/rhema/` prefix.
+/// Handles all 8 OSC addresses under the `/openbeam/` prefix.
 ///
-/// NOTE: The `/rhema/` prefix is kept for backward compatibility with
+/// NOTE: The `/openbeam/` prefix is kept for backward compatibility with
 /// existing Stream Deck and TouchOSC configurations. Do not rename.
 pub fn parse_osc(address: &str, args: &[OscType]) -> Result<RemoteCommand, CommandError> {
     match address {
-        "/rhema/next" => Ok(RemoteCommand::Next),
-        "/rhema/prev" => Ok(RemoteCommand::Prev),
-        "/rhema/show" => Ok(RemoteCommand::Show),
-        "/rhema/hide" => Ok(RemoteCommand::Hide),
-        "/rhema/theme" => {
+        "/openbeam/next" => Ok(RemoteCommand::Next),
+        "/openbeam/prev" => Ok(RemoteCommand::Prev),
+        "/openbeam/show" => Ok(RemoteCommand::Show),
+        "/openbeam/hide" => Ok(RemoteCommand::Hide),
+        "/openbeam/theme" => {
             let arg = args.first().ok_or_else(|| CommandError::MissingArgument {
                 address: address.into(),
             })?;
             let name = coerce_string(arg)?;
             Ok(RemoteCommand::Theme(name))
         }
-        "/rhema/opacity" => {
+        "/openbeam/opacity" => {
             let arg = args.first().ok_or_else(|| CommandError::MissingArgument {
                 address: address.into(),
             })?;
             let val = coerce_f32_normalized(arg)?;
             Ok(RemoteCommand::Opacity(val))
         }
-        "/rhema/confidence" => {
+        "/openbeam/confidence" => {
             let arg = args.first().ok_or_else(|| CommandError::MissingArgument {
                 address: address.into(),
             })?;
             let val = coerce_f32_normalized(arg)?;
             Ok(RemoteCommand::Confidence(val))
         }
-        "/rhema/on_air" => {
+        "/openbeam/on_air" => {
             let arg = args.first().ok_or_else(|| CommandError::MissingArgument {
                 address: address.into(),
             })?;
@@ -181,13 +181,13 @@ mod tests {
 
     #[test]
     fn parse_osc_next() {
-        assert_eq!(parse_osc("/rhema/next", &[]).unwrap(), RemoteCommand::Next);
+        assert_eq!(parse_osc("/openbeam/next", &[]).unwrap(), RemoteCommand::Next);
     }
 
     #[test]
     fn parse_osc_theme() {
         assert_eq!(
-            parse_osc("/rhema/theme", &[OscType::String("Minimal".into())]).unwrap(),
+            parse_osc("/openbeam/theme", &[OscType::String("Minimal".into())]).unwrap(),
             RemoteCommand::Theme("Minimal".into())
         );
     }
@@ -195,7 +195,7 @@ mod tests {
     #[test]
     fn parse_osc_on_air_from_float() {
         assert_eq!(
-            parse_osc("/rhema/on_air", &[OscType::Float(1.0)]).unwrap(),
+            parse_osc("/openbeam/on_air", &[OscType::Float(1.0)]).unwrap(),
             RemoteCommand::OnAir(true)
         );
     }
@@ -207,6 +207,6 @@ mod tests {
 
     #[test]
     fn parse_osc_missing_arg_errors() {
-        assert!(parse_osc("/rhema/opacity", &[]).is_err());
+        assert!(parse_osc("/openbeam/opacity", &[]).is_err());
     }
 }

@@ -389,7 +389,7 @@ function RemoteControlSection() {
         </div>
         <p className="text-[0.625rem] text-muted-foreground">
           Receives OSC messages from Stream Deck, Companion, TouchOSC, or any OSC controller.
-          Addresses use the <code className="text-[0.5625rem]">/rhema/*</code> prefix (kept for backward compatibility).
+          Addresses use the <code className="text-[0.5625rem]">/openbeam/*</code> prefix.
         </p>
       </div>
 
