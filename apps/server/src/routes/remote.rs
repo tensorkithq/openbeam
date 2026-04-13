@@ -85,11 +85,6 @@ pub struct StartOscRequest {
     pub port: u16,
 }
 
-#[derive(Serialize)]
-pub struct StartOscResponse {
-    pub port: u16,
-}
-
 pub async fn start_osc(
     State(state): State<Arc<RemoteState>>,
     Json(body): Json<StartOscRequest>,

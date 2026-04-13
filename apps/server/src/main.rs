@@ -92,6 +92,7 @@ async fn main() {
     let quotation_matcher = build_quotation_matcher(&bible_db);
 
     let broadcast_relay = Arc::new(routes::BroadcastRelay::new());
+    let remote_state = Arc::new(routes::RemoteState::new());
 
     let app_state = Arc::new(AppState {
         detection_pipeline: tokio::sync::Mutex::new(pipeline),
@@ -118,6 +119,17 @@ async fn main() {
             Router::new()
                 .route("/ws/overlay", get(routes::overlay::ws_overlay))
                 .with_state(broadcast_relay),
+        )
+        // Remote control (own state — RemoteState)
+        .merge(
+            Router::new()
+                .route("/ws/remote", get(routes::remote::ws_remote))
+                .route("/api/remote/osc/start", post(routes::remote::start_osc))
+                .route("/api/remote/osc/stop", post(routes::remote::stop_osc))
+                .route("/api/remote/osc/status", get(routes::remote::osc_status))
+                .route("/api/v1/control", post(routes::remote::control))
+                .route("/api/remote/status", get(routes::remote::get_status).post(routes::remote::update_status))
+                .with_state(remote_state),
         )
         .layer(CorsLayer::permissive());
 
