@@ -26,9 +26,10 @@ if (resolutionParam) {
   }
 }
 
-// Build WS URL with role=overlay
+// Build WS URL with role=overlay and session scoping
 const role = params.get("role") || "overlay"
-const overlaySocket = new OpenBeamSocket(`/ws/overlay?role=${role}`)
+const sessionId = params.get("session") || "default"
+const overlaySocket = new OpenBeamSocket(`/ws/overlay?role=${role}&session=${sessionId}`)
 
 function BroadcastCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
