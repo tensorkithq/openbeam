@@ -6,8 +6,9 @@ use axum::{
     response::IntoResponse,
 };
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{broadcast, watch};
+use tokio::sync::{broadcast, watch, RwLock};
 
 pub struct BroadcastRelay {
     pub tx: broadcast::Sender<String>,
@@ -27,21 +28,53 @@ impl BroadcastRelay {
     }
 }
 
+pub struct SessionRelayMap {
+    relays: RwLock<HashMap<String, Arc<BroadcastRelay>>>,
+}
+
+impl SessionRelayMap {
+    pub fn new() -> Self {
+        Self {
+            relays: RwLock::new(HashMap::new()),
+        }
+    }
+
+    pub async fn get_or_create(&self, session_id: &str) -> Arc<BroadcastRelay> {
+        {
+            let map = self.relays.read().await;
+            if let Some(relay) = map.get(session_id) {
+                return relay.clone();
+            }
+        }
+        let mut map = self.relays.write().await;
+        map.entry(session_id.to_string())
+            .or_insert_with(|| Arc::new(BroadcastRelay::new()))
+            .clone()
+    }
+}
+
 #[derive(Deserialize)]
 pub struct OverlayQuery {
     #[serde(default = "default_role")]
     role: String,
+    #[serde(default = "default_session")]
+    session: String,
 }
 
 fn default_role() -> String {
     "overlay".to_string()
 }
 
+fn default_session() -> String {
+    "default".to_string()
+}
+
 pub async fn ws_overlay(
     ws: WebSocketUpgrade,
     Query(params): Query<OverlayQuery>,
-    State(relay): State<Arc<BroadcastRelay>>,
+    State(map): State<Arc<SessionRelayMap>>,
 ) -> impl IntoResponse {
+    let relay = map.get_or_create(&params.session).await;
     ws.on_upgrade(move |socket| handle_overlay(socket, params.role, relay))
 }
 
