@@ -18,7 +18,9 @@ function LevelMeter({
       {...props}
     >
       {Array.from({ length: bars }, (_, i) => {
-        const threshold = (i + 1) / bars
+        // RMS audio levels are typically 0.0-0.15 for normal speech.
+        // Scale thresholds to this range so bars respond to real input.
+        const threshold = ((i + 1) / bars) * 0.15
         const active = level >= threshold
 
         return (
