@@ -34,4 +34,4 @@ See [LICENSE](./LICENSE).
 
 ---
 
-<sup>Inspired by [Rhema](https://github.com/tensorkithq/rhema).</sup>
+<sup>Inspired by [Rhema](https://github.com/openbezal/rhema).</sup>
