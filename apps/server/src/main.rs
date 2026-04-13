@@ -10,7 +10,8 @@ use serde_json::{json, Value};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
-use tracing_subscriber::EnvFilter;
+use tower_http::trace::TraceLayer;
+use tracing_subscriber::{fmt, EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 use config::Config;
 use state::AppState;
@@ -31,8 +32,9 @@ fn find_bible_db(configured_path: &str) -> PathBuf {
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+    tracing_subscriber::registry()
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,tower_http=debug".into()))
+        .with(fmt::layer().with_target(true).with_thread_ids(false))
         .init();
 
     let config = Config::from_env();
@@ -133,6 +135,7 @@ async fn main() {
                 .route("/api/remote/status", get(routes::remote::get_status).post(routes::remote::update_status))
                 .with_state(remote_state),
         )
+        .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive());
 
     let addr = format!("{}:{}", config.host, config.port);
