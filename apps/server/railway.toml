@@ -1,0 +1,8 @@
+[build]
+buildCommand = "cargo build --release"
+watchPatterns = ["src/**", "crates/**", "Cargo.toml", "Cargo.lock"]
+
+[deploy]
+startCommand = "./target/release/openbeam-server"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30

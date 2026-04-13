@@ -1,0 +1,6 @@
+[build]
+buildCommand = "pnpm install && pnpm build"
+
+[deploy]
+# Static files served by Railway's static hosting
+staticFolder = "build"
