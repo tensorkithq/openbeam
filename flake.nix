@@ -90,8 +90,8 @@
         if [ -f "$WEB_PID" ] && kill -0 "$(cat "$WEB_PID")" 2>/dev/null; then
           echo "web:  already running (pid $(cat "$WEB_PID"))"
         else
-          echo "web:  serving build from $WEB_DIR..."
-          (${pkgs.python3}/bin/python3 -m http.server 4000 --directory "$WEB_DIR" --bind 0.0.0.0 >> "$WEB_LOG" 2>&1) &
+          echo "web:  serving build via vite preview..."
+          (cd "$PROJECT_ROOT/apps/web" && npx vite preview --port 4000 --host 0.0.0.0 >> "$WEB_LOG" 2>&1) &
           echo $! > "$WEB_PID"
           for i in $(seq 1 10); do
             if ${pkgs.curl}/bin/curl -sf http://localhost:4000 > /dev/null 2>&1; then
@@ -256,7 +256,6 @@
           pkgs.openssl
           pkgs.nodejs_22
           pkgs.pnpm_10
-          pkgs.python3
           pkgs.git
           pkgs.curl
           pkgs.jq
