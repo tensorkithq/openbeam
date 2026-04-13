@@ -1,12 +1,4 @@
-export interface VerseSegment {
-  verseNumber?: number
-  text: string
-}
-
-export interface VerseRenderData {
-  reference: string
-  segments: VerseSegment[]
-}
+export type { VerseSegment, VerseRenderData } from "@openbeam/streams"
 
 export interface RenderOptions {
   opacity?: number
