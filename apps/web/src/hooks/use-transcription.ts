@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef } from "react"
 import { useTranscriptStore } from "@/stores"
 import { useSettingsStore } from "@/stores/settings-store"
 import { transcriptionSocket } from "@/services"
+import { useAudio } from "./use-audio"
 
 export function useTranscription() {
   const store = useTranscriptStore()
+  const { startCapture, stopCapture } = useAudio()
   const cleanups = useRef<(() => void)[]>([])
 
   // Wire WebSocket transcript events to store
@@ -54,22 +56,27 @@ export function useTranscription() {
   }, [store])
 
   const startTranscription = useCallback(async () => {
+    const settings = useSettingsStore.getState()
+
+    // Start audio capture first — mic data flows via worklet to the socket
+    await startCapture(settings.audioDeviceId)
+
     store.setTranscribing(true)
     store.setConnectionStatus("connecting")
     transcriptionSocket.connect()
 
     // Send API key so the backend can authenticate with the STT provider
-    const apiKey = useSettingsStore.getState().deepgramApiKey
-    if (apiKey) {
-      transcriptionSocket.send("auth", { apiKey })
+    if (settings.deepgramApiKey) {
+      transcriptionSocket.send("auth", { apiKey: settings.deepgramApiKey })
     }
-  }, [store])
+  }, [store, startCapture])
 
   const stopTranscription = useCallback(async () => {
+    await stopCapture()
     store.setTranscribing(false)
     store.setPartial("")
     transcriptionSocket.disconnect()
-  }, [store])
+  }, [store, stopCapture])
 
   return {
     ...store,
