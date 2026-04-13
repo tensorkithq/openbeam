@@ -1,4 +1,5 @@
 import { useDetectionStore } from "@/stores"
+import { useSettingsStore } from "@/stores/settings-store"
 import { api } from "@/services"
 
 async function detectVerses(text: string) {
@@ -23,8 +24,8 @@ export const detectionActions = {
 
 export function useDetection() {
   const detections = useDetectionStore((s) => s.detections)
-  const autoMode = useDetectionStore((s) => s.autoMode)
-  const confidenceThreshold = useDetectionStore((s) => s.confidenceThreshold)
+  const autoMode = useSettingsStore((s) => s.autoMode)
+  const confidenceThreshold = useSettingsStore((s) => s.confidenceThreshold)
 
   return {
     detections,

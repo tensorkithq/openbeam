@@ -3,22 +3,16 @@ import type { DetectionResult } from "@/types"
 
 interface DetectionState {
   detections: DetectionResult[]
-  autoMode: boolean
-  confidenceThreshold: number
 
   addDetection: (detection: DetectionResult) => void
   addDetections: (detections: DetectionResult[]) => void
   setDetections: (detections: DetectionResult[]) => void
   removeDetection: (verseRef: string) => void
   clearDetections: () => void
-  setAutoMode: (auto: boolean) => void
-  setConfidenceThreshold: (threshold: number) => void
 }
 
 export const useDetectionStore = create<DetectionState>((set) => ({
   detections: [],
-  autoMode: false,
-  confidenceThreshold: 0.8,
 
   addDetection: (detection) =>
     set((state) => {
@@ -55,7 +49,4 @@ export const useDetectionStore = create<DetectionState>((set) => ({
       detections: state.detections.filter((d) => d.verse_ref !== verseRef),
     })),
   clearDetections: () => set({ detections: [] }),
-  setAutoMode: (autoMode) => set({ autoMode }),
-  setConfidenceThreshold: (confidenceThreshold) =>
-    set({ confidenceThreshold }),
 }))
