@@ -81,3 +81,4 @@ export class OpenBeamSocket {
 export const transcriptionSocket = new OpenBeamSocket("/ws/transcription")
 export const detectionSocket = new OpenBeamSocket("/ws/detection")
 export const overlaySocket = new OpenBeamSocket("/ws/overlay?role=dashboard")
+export const remoteSocket = new OpenBeamSocket("/ws/remote")

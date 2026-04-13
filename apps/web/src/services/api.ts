@@ -3,6 +3,19 @@ import type { DetectionResult, SemanticSearchResult } from "@/types/detection"
 
 const API_BASE = "" // Same origin — Vite proxy handles /api/* -> :8080
 
+export interface StatusSnapshot {
+  on_air: boolean
+  active_theme: string | null
+  live_verse: string | null
+  queue_length: number
+  confidence_threshold: number
+}
+
+export interface RemoteCommand {
+  command: string
+  value?: unknown
+}
+
 export interface VersesForSearchRow {
   book_number: number
   book_name: string
@@ -87,6 +100,15 @@ export const api = {
 
   getOscStatus: (): Promise<{ active: boolean; port?: number }> =>
     get("/api/remote/osc/status"),
+
+  getRemoteStatus: (): Promise<StatusSnapshot> =>
+    get("/api/remote/status"),
+
+  updateRemoteStatus: (update: Partial<StatusSnapshot>): Promise<void> =>
+    post("/api/remote/status", update),
+
+  sendControlCommand: (cmd: RemoteCommand): Promise<{ success: boolean }> =>
+    post("/api/v1/control", cmd),
 
   // Health
   health: (): Promise<{ status: string; service: string; version: string }> =>

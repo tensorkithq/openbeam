@@ -5,4 +5,5 @@ export {
   transcriptionSocket,
   detectionSocket,
   overlaySocket,
+  remoteSocket,
 } from "./ws"

@@ -1,21 +1,98 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useBroadcastStore } from "@/stores/broadcast-store"
 import { useBibleStore } from "@/stores/bible-store"
 import { useQueueStore } from "@/stores/queue-store"
+import { useSettingsStore } from "@/stores/settings-store"
 import { toVerseRenderData } from "@/hooks/use-broadcast"
+import { remoteSocket, api } from "@/services"
 import type { Verse } from "@/types"
 
-// TODO: Wire to WebSocket in WS-3 — all listen/invoke calls replaced with stubs
-
 /**
- * Listens for remote control events and dispatches to Zustand stores.
+ * Listens for remote control events via WebSocket and dispatches to Zustand stores.
+ * Also syncs StatusSnapshot to the server every second.
  * Mount this hook once at the app root level.
  */
 export function useRemoteControl() {
+  const syncTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+
   useEffect(() => {
-    // TODO: Wire to WebSocket in WS-3
-    // All Tauri listen() calls have been removed.
-    // Remote control events will be received via WebSocket when WS-3 is implemented.
+    remoteSocket.connect()
+
+    const unsubs = [
+      remoteSocket.on("remote:next", () => {
+        navigateNext()
+      }),
+      remoteSocket.on("remote:prev", () => {
+        navigatePrev()
+      }),
+      remoteSocket.on("remote:theme", (_type, data) => {
+        const payload = parsePayload(data)
+        const name = payload?.name as string | undefined
+        if (!name) return
+        const { themes, setActiveTheme } = useBroadcastStore.getState()
+        const theme = themes.find(
+          (t) => t.name.toLowerCase() === name.toLowerCase()
+        )
+        if (theme) setActiveTheme(theme.id)
+      }),
+      remoteSocket.on("remote:opacity", (_type, data) => {
+        const payload = parsePayload(data)
+        const value = payload?.value as number | undefined
+        if (value !== undefined) {
+          console.log("[remote-control] opacity:", value)
+        }
+      }),
+      remoteSocket.on("remote:on_air", (_type, data) => {
+        const payload = parsePayload(data)
+        const active = payload?.active as boolean | undefined
+        if (active !== undefined) {
+          useBroadcastStore.getState().setLive(active)
+        }
+      }),
+      remoteSocket.on("remote:show_broadcast", () => {
+        useBroadcastStore.getState().setLive(true)
+      }),
+      remoteSocket.on("remote:hide_broadcast", () => {
+        useBroadcastStore.getState().setLive(false)
+      }),
+      remoteSocket.on("remote:set_confidence", (_type, data) => {
+        const payload = parsePayload(data)
+        const value = payload?.value as number | undefined
+        if (value !== undefined) {
+          useSettingsStore.getState().setConfidenceThreshold(value)
+        }
+      }),
+    ]
+
+    // Sync status snapshot to server every 1s
+    syncTimer.current = setInterval(() => {
+      const { isLive, liveVerse, activeThemeId, themes } =
+        useBroadcastStore.getState()
+      const { items } = useQueueStore.getState()
+      const { confidenceThreshold } = useSettingsStore.getState()
+      const activeTheme = themes.find((t) => t.id === activeThemeId)
+
+      api
+        .updateRemoteStatus({
+          on_air: isLive,
+          active_theme: activeTheme?.name ?? null,
+          live_verse: liveVerse?.reference ?? null,
+          queue_length: items.length,
+          confidence_threshold: confidenceThreshold,
+        })
+        .catch(() => {
+          // Server may not be reachable yet
+        })
+    }, 1000)
+
+    return () => {
+      unsubs.forEach((unsub) => unsub())
+      remoteSocket.disconnect()
+      if (syncTimer.current) {
+        clearInterval(syncTimer.current)
+        syncTimer.current = null
+      }
+    }
   }, [])
 }
 
@@ -44,7 +121,6 @@ export async function presentQueueItem(index: number) {
 
     const { verse } = item
 
-    // TODO: Wire to API in WS-3 — fetch full verse from backend
     const verseToPresent: Verse = verse
 
     const bibleState = useBibleStore.getState()
@@ -110,6 +186,3 @@ function parsePayload(raw: unknown): Record<string, unknown> | null {
   }
   return null
 }
-
-// Keep parsePayload available for future use
-void parsePayload
