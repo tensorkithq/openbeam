@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react"
 import { useTranscriptStore } from "@/stores"
 import { useSettingsStore } from "@/stores/settings-store"
-import { transcriptionSocket } from "@/services"
+import { transcriptionSocket, detectionSocket } from "@/services"
 import { useAudio } from "./use-audio"
 
 export function useTranscription() {
@@ -31,6 +31,7 @@ export function useTranscription() {
         timestamp: Date.now(),
       }
       store.addSegment(segment)
+      detectionSocket.send("transcript:final", { text: payload.text })
     })
 
     const offConnected = transcriptionSocket.on("_connected", () => {
