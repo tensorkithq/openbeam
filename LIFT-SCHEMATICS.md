@@ -1,11 +1,12 @@
-# OpenBeam — Lift Schematics from Rhema
+# OpenBeam — Lift Schematics
 
 ## Overview
 
-OpenBeam is a web replatform of Rhema, a Tauri v2 desktop application for real-time AI-powered Bible verse detection during live sermons with broadcast overlay output.
+OpenBeam is a web application for real-time AI-powered Bible verse detection during live sermons with broadcast overlay output. Inspired by the Rhema desktop app<sup>1</sup>, this project targets a web-first architecture.
 
-**Source**: `rhema/` (Tauri v2 + React 19 + Rust backend)
-**Target**: `openbeam/` (Web app — React 19 frontend + Axum API server)
+**Structure**: `apps/web` (React 19 frontend) + `apps/server` (Axum API server)
+
+<sup>1</sup> <sub>Reference codebase: `rhema/` (Tauri v2 + React 19 + Rust backend)</sub>
 
 ---
 
@@ -217,23 +218,25 @@ Phase 4: Production
 
 ---
 
-## Decisions Made
+## Decisions — Locked
+
+Full rationale in `.idea/DECISIONS.md`.
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Backend language | Rust (Axum) | Reuse 5 existing Rhema crates without rewrite |
+| Backend language | Rust (Axum) | Reuse 5 existing crates without rewrite |
 | Detection pipeline | Server-side | ONNX model (571MB) + HNSW index not viable in browser |
-| NDI replacement | OBS Browser Source | Covers 80%+ of broadcast use cases, zero native code |
-| STT approach | Server-proxied Deepgram | API key security, reuse existing Deepgram client |
-| Offline/Whisper | Dropped for web | No viable browser-side equivalent |
-| Database | SQLite on server | Existing schema + FTS5 works, no migration needed |
+| STT provider | Deepgram only | No Whisper, no offline fallback |
+| STT architecture | BYOK — user's own Deepgram key | Key in localStorage, server proxies but never persists |
+| Data persistence | None server-side | All user data in browser localStorage. Server is stateless |
+| Auth | None | Open access, no accounts. Revisit if abuse requires it |
+| Broadcast output | OBS Browser Source | `/overlay` route, transparent page via WebSocket |
+| NDI | Deferred | Not at launch. Companion app only if users request it |
+| Database | SQLite on server | Existing schema + FTS5, read-only shared resource |
 | Monorepo | apps/web + apps/server | Clear separation, shared types |
 
-## Decisions Deferred
+## Decisions — Deferred
 
 | Decision | Options | Decide By |
 |---|---|---|
-| Multi-tenancy | Single-user vs. team accounts | WS-10 |
-| NDI companion app | Build lightweight Tauri bridge or drop NDI | Post-launch |
-| Hosting | Self-hosted vs. managed SaaS | WS-10 |
-| WebGPU Whisper | Experimental local STT in browser | Post-launch |
+| Hosting model | Self-hosted vs. managed SaaS | WS-10 |
