@@ -24,8 +24,10 @@ OpenBeam uses a multi-strategy detection pipeline to find Bible verses in real-t
 
 ```
 apps/
-  web/      — React frontend
-  server/   — Axum Rust backend
+  web/          — React dashboard SPA
+  server/       — Axum Rust backend
+packages/
+  overlay/      — Broadcast overlay for OBS/vMix/xSplit (standalone)
 ```
 
 ## License
