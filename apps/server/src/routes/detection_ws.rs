@@ -95,7 +95,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>, bible_db: Ar
         };
 
         // Determine processing strategy based on message type
-        let results = match incoming.msg_type.as_str() {
+        let mut results = match incoming.msg_type.as_str() {
             "transcript:final" => {
                 let mut all_results = Vec::new();
 
@@ -143,6 +143,27 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>, bible_db: Ar
                 continue;
             }
         };
+
+        if results.is_empty() {
+            continue;
+        }
+
+        // Resolve semantic/quotation detections that have verse_id but empty verse_ref
+        for r in &mut results {
+            if r.detection.verse_ref.book_number == 0 {
+                if let Some(vid) = r.detection.verse_id {
+                    if let Ok(Some(v)) = bible_db.get_verse_by_id(vid) {
+                        r.detection.verse_ref.book_number = v.book_number;
+                        r.detection.verse_ref.book_name = v.book_name;
+                        r.detection.verse_ref.chapter = v.chapter;
+                        r.detection.verse_ref.verse_start = v.verse;
+                    }
+                }
+            }
+        }
+
+        // Drop results that couldn't be resolved
+        results.retain(|r| r.detection.verse_ref.book_number != 0);
 
         if results.is_empty() {
             continue;
