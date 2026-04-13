@@ -1,7 +1,7 @@
 import type { Translation, Book, Verse, CrossReference } from "@/types"
 import type { DetectionResult, SemanticSearchResult } from "@/types/detection"
 
-const API_BASE = "" // Same origin — Vite proxy handles /api/* -> :8080
+const API_BASE = import.meta.env.VITE_API_URL ?? "" // Same origin in dev (Vite proxy), explicit URL in production
 
 export interface StatusSnapshot {
   on_air: boolean

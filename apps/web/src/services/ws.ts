@@ -8,8 +8,14 @@ export class OpenBeamSocket {
   private url: string
 
   constructor(path: string) {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-    this.url = `${protocol}//${window.location.host}${path}`
+    const apiUrl = import.meta.env.VITE_API_URL
+    if (apiUrl) {
+      const base = apiUrl.replace(/^http/, "ws")
+      this.url = `${base}${path}`
+    } else {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
+      this.url = `${protocol}//${window.location.host}${path}`
+    }
   }
 
   connect(params?: Record<string, string>) {
