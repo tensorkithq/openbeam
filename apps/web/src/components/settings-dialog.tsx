@@ -123,7 +123,7 @@ function AudioSection() {
 }
 
 function SpeechSection() {
-  const { sttProvider, setSttProvider, deepgramApiKey, setDeepgramApiKey } = useSettingsStore()
+  const { deepgramApiKey, setDeepgramApiKey } = useSettingsStore()
   const [keyValue, setKeyValue] = useState(deepgramApiKey ?? "")
   const [saved, setSaved] = useState(false)
 
@@ -137,45 +137,32 @@ function SpeechSection() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Provider</label>
-        <RadioGroup value={sttProvider} onValueChange={(v) => setSttProvider(v as "deepgram" | "whisper")} className="gap-3">
-          <label className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors has-data-[state=checked]:border-primary/50 has-data-[state=checked]:bg-primary/5 has-data-[state=checked]:ring-1 has-data-[state=checked]:ring-primary/20 ${sttProvider !== "deepgram" ? "hover:border-muted-foreground/25" : ""}`}>
-            <RadioGroupItem value="deepgram" className="mt-0.5" />
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-foreground">Cloud (Deepgram)</span>
-              <p className="text-[0.625rem] leading-relaxed text-muted-foreground">
-                Uses Deepgram Nova-3 for real-time streaming transcription. Requires an API key and internet connection.
-              </p>
-            </div>
-          </label>
-          <label className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors has-data-[state=checked]:border-primary/50 has-data-[state=checked]:bg-primary/5 has-data-[state=checked]:ring-1 has-data-[state=checked]:ring-primary/20 ${sttProvider !== "whisper" ? "hover:border-muted-foreground/25" : ""}`}>
-            <RadioGroupItem value="whisper" className="mt-0.5" />
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-foreground">Local (Whisper)</span>
-              <p className="text-[0.625rem] leading-relaxed text-muted-foreground">
-                Runs Whisper large-v3-turbo locally on your device. Fully offline, no API key needed.
-              </p>
-            </div>
-          </label>
-        </RadioGroup>
+        <div className="flex items-start gap-3 rounded-lg border border-primary/50 bg-primary/5 p-3 ring-1 ring-primary/20">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-foreground">Cloud (Deepgram Nova-3)</span>
+            <p className="text-[0.625rem] leading-relaxed text-muted-foreground">
+              Real-time streaming transcription with keyword boosting for Bible book names.
+            </p>
+          </div>
+        </div>
       </div>
 
-      {sttProvider === "deepgram" && (
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Deepgram API Key</label>
-            {deepgramApiKey && <Badge variant="outline" className="text-[0.5rem]">Key configured</Badge>}
-          </div>
-          <div className="flex gap-2">
-            <Input type="password" placeholder="Enter your Deepgram API key..." value={keyValue} onChange={(e) => setKeyValue(e.target.value)} className="flex-1 text-xs" />
-            <Button size="sm" onClick={handleSaveKey}>
-              {saved ? (<><CheckIcon className="size-3" />Saved</>) : "Save"}
-            </Button>
-          </div>
-          <p className="text-[0.625rem] text-muted-foreground">
-            Required for live transcription. Get a key at <span className="text-primary">deepgram.com</span>
-          </p>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Deepgram API Key</label>
+          {deepgramApiKey && <Badge variant="outline" className="text-[0.5rem]">Key configured</Badge>}
         </div>
-      )}
+        <div className="flex gap-2">
+          <Input type="password" placeholder="Enter your Deepgram API key..." value={keyValue} onChange={(e) => setKeyValue(e.target.value)} className="flex-1 text-xs" />
+          <Button size="sm" onClick={handleSaveKey}>
+            {saved ? (<><CheckIcon className="size-3" />Saved</>) : "Save"}
+          </Button>
+        </div>
+        <p className="text-[0.625rem] text-muted-foreground">
+          Required for live transcription. Get a key at{" "}
+          <a href="https://console.deepgram.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">console.deepgram.com</a>
+        </p>
+      </div>
     </div>
   )
 }
@@ -227,7 +214,7 @@ function DisplayModeSection() {
 }
 
 function ApiKeysSection() {
-  const { deepgramApiKey, sttProvider } = useSettingsStore()
+  const { deepgramApiKey } = useSettingsStore()
 
   return (
     <div className="flex flex-col gap-6">
@@ -241,8 +228,7 @@ function ApiKeysSection() {
           )}
         </div>
         <p className="text-[0.625rem] text-muted-foreground">
-          {sttProvider === "whisper" ? "Not required when using local Whisper. " : "Required for cloud transcription. "}
-          Configure in the Speech Recognition section.
+          Required for cloud transcription. Configure in the Speech Recognition section.
         </p>
       </div>
     </div>

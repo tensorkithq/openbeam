@@ -9,3 +9,5 @@ target/
 .DS_Store
 .idea/
 *.log
+.dev/
+flake.lock

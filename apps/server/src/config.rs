@@ -25,7 +25,7 @@ impl Config {
                 .ok()
                 .and_then(|d| d.parse().ok())
                 .unwrap_or(4096),
-            db_path: env::var("DB_PATH").unwrap_or_else(|_| "./data/rhema.db".to_string()),
+            db_path: env::var("DB_PATH").unwrap_or_else(|_| "./data/openbeam.db".to_string()),
             log_level: env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()),
         }
     }

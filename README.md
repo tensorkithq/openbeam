@@ -42,7 +42,7 @@ pnpm install && pnpm dev
 |---|---|---|---|
 | `OPENROUTER_API_KEY` | Yes | — | Platform embedding API key |
 | `PORT` | No | 8080 | Server port |
-| `DB_PATH` | No | ./data/rhema.db | Bible database path |
+| `DB_PATH` | No | ./data/openbeam.db | Bible database path |
 
 ## Project Structure
 

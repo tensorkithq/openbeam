@@ -19,8 +19,8 @@ use state::AppState;
 fn find_bible_db(configured_path: &str) -> PathBuf {
     let candidates = [
         PathBuf::from(configured_path),
-        PathBuf::from("data/rhema.db"),
-        PathBuf::from("../../data/rhema.db"),
+        PathBuf::from("data/openbeam.db"),
+        PathBuf::from("../../data/openbeam.db"),
     ];
     for path in &candidates {
         if path.exists() {

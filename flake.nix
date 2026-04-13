@@ -183,7 +183,7 @@
           export PROJECT_ROOT="$PWD"
           export PORT=4001
           export HOST=0.0.0.0
-          export DB_PATH="$PWD/apps/server/data/rhema.db"
+          export DB_PATH="$PWD/apps/server/data/openbeam.db"
           export RUST_LOG=info,tower_http=debug
 
           if [ -f "$PWD/.env" ]; then
