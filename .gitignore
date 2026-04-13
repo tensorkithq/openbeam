@@ -9,4 +9,3 @@ target/
 .DS_Store
 .idea/
 *.log
-pnpm-lock.yaml

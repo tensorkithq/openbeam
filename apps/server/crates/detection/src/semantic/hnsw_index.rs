@@ -65,7 +65,7 @@ impl HnswVectorIndex {
 
         let num_vectors = embeddings.len() / dim;
 
-        if embeddings.len() % dim != 0 {
+        if !embeddings.len().is_multiple_of(dim) {
             return Err(DetectionError::Internal(format!(
                 "embeddings length {} is not a multiple of dim {}",
                 embeddings.len(),
