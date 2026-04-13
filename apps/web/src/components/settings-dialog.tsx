@@ -255,13 +255,15 @@ interface TranslationInfo {
 }
 
 function BibleSection() {
-  const [translations, _setTranslations] = useState<TranslationInfo[]>([])
+  const [translations, setTranslations] = useState<TranslationInfo[]>([])
   const [activeId, setActiveId] = useState<number>(1)
   const [loading, setLoading] = useState(true)
 
-  // TODO: Wire to API in WS-3
   useEffect(() => {
-    setLoading(false)
+    api.listTranslations()
+      .then((list) => setTranslations(list))
+      .catch((e) => console.error("[settings] Failed to load translations:", e))
+      .finally(() => setLoading(false))
   }, [])
 
   const handleChange = async (value: string) => {
