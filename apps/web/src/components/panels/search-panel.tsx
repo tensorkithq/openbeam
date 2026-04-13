@@ -29,7 +29,7 @@ import { bibleActions } from "@/hooks/use-bible"
 import { useBibleStore, useQueueStore } from "@/stores"
 import type { Book, Verse } from "@/types"
 import { Input } from "@/components/ui/input"
-import { searchContextWithFuse } from "@/lib/context-search"
+import { searchContextWithFuse, prefetchFuseIndex } from "@/lib/context-search"
 import { api } from "@/services"
 
 type SearchTab = "book" | "context"
@@ -304,6 +304,7 @@ export function SearchPanel() {
 
   useEffect(() => {
     translationId$.next(activeTranslationId)
+    prefetchFuseIndex(activeTranslationId)
   }, [activeTranslationId, translationId$])
 
   useEffect(() => {
