@@ -1,9 +1,8 @@
 import { createRoot } from "react-dom/client"
 import { useRef, useEffect, useCallback } from "react"
 import { renderVerse } from "@/lib/verse-renderer"
+import { overlaySocket } from "@/services"
 import type { BroadcastTheme, VerseRenderData } from "@/types/broadcast"
-
-// TODO: Wire to WebSocket in WS-3 — all Tauri window events replaced with stubs
 
 interface BroadcastPayload {
   theme: BroadcastTheme
@@ -72,9 +71,19 @@ function BroadcastCanvas() {
       }
     }
 
-    // TODO: Wire to WebSocket in WS-3
-    // In the Tauri version, this listened to getCurrentWebviewWindow() events.
-    // In the web version, this will subscribe to a WebSocket for verse updates.
+    overlaySocket.connect()
+
+    const offUpdate = overlaySocket.on("verse:update", (_, data) => {
+      const payload = data as BroadcastPayload
+      latestData.current = payload
+      if (payload.theme) preloadBackgroundImage(payload.theme)
+      draw()
+    })
+
+    return () => {
+      offUpdate()
+      overlaySocket.disconnect()
+    }
   }, [draw, preloadBackgroundImage])
 
   return (
