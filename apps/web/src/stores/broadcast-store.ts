@@ -34,7 +34,6 @@ function loadThemesFromStorage(): BroadcastTheme[] {
     if (raw) {
       const custom = JSON.parse(raw) as BroadcastTheme[]
       // Merge: always use fresh builtins + persisted custom themes
-      const customIds = new Set(custom.map((t) => t.id))
       return [
         ...BUILTIN_THEMES,
         ...custom.filter((t) => !t.builtin && !BUILTIN_THEMES.some((b) => b.id === t.id)),
