@@ -101,6 +101,7 @@ async fn main() {
     let app_state = Arc::new(AppState {
         detection_pipeline: tokio::sync::Mutex::new(pipeline),
         quotation_matcher: tokio::sync::Mutex::new(quotation_matcher),
+        bible_db: bible_db.clone(),
     });
 
     let app = Router::new()
