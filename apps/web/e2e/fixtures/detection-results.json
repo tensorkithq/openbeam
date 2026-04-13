@@ -1,0 +1,17 @@
+[
+  {
+    "type": "detection:result",
+    "data": {
+      "verse_ref": "John 3:16",
+      "verse_text": "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.",
+      "book_name": "John",
+      "book_number": 43,
+      "chapter": 3,
+      "verse": 16,
+      "confidence": 0.95,
+      "source": "direct",
+      "auto_queued": true,
+      "transcript_snippet": "Let's turn to John chapter 3 verse 16"
+    }
+  }
+]
