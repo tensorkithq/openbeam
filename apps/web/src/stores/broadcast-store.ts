@@ -4,6 +4,25 @@ import { BUILTIN_THEMES } from "@/lib/builtin-themes"
 import { overlaySocket } from "@/services"
 
 const THEMES_KEY = "openbeam:themes"
+const BROADCAST_SETTINGS_KEY = "openbeam:broadcast-settings"
+
+function loadBroadcastSettings(): { activeThemeId?: string; altActiveThemeId?: string } {
+  try {
+    const raw = localStorage.getItem(BROADCAST_SETTINGS_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    // ignore corrupt storage
+  }
+  return {}
+}
+
+function persistBroadcastSettings(activeThemeId: string, altActiveThemeId: string) {
+  try {
+    localStorage.setItem(BROADCAST_SETTINGS_KEY, JSON.stringify({ activeThemeId, altActiveThemeId }))
+  } catch {
+    // ignore storage errors
+  }
+}
 
 function emitTo(label: string, _event: string, payload: unknown) {
   overlaySocket.send("verse:update", { label, ...(payload as Record<string, unknown>) })
@@ -105,11 +124,12 @@ function setNestedValue(obj: Record<string, unknown>, path: string, value: unkno
 }
 
 const initialThemes = loadThemesFromStorage()
+const savedBroadcast = loadBroadcastSettings()
 
 export const useBroadcastStore = create<BroadcastState>((set, get) => ({
   themes: initialThemes,
-  activeThemeId: BUILTIN_THEMES[0].id,
-  altActiveThemeId: BUILTIN_THEMES[0].id,
+  activeThemeId: savedBroadcast.activeThemeId ?? BUILTIN_THEMES[0].id,
+  altActiveThemeId: savedBroadcast.altActiveThemeId ?? BUILTIN_THEMES[0].id,
   isLive: false,
   liveVerse: null,
   isDesignerOpen: false,
@@ -174,10 +194,12 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
   },
   setActiveTheme: (activeThemeId) => {
     set({ activeThemeId })
+    persistBroadcastSettings(activeThemeId, get().altActiveThemeId)
     get().syncBroadcastOutputFor("main")
   },
   setAltActiveTheme: (altActiveThemeId) => {
     set({ altActiveThemeId })
+    persistBroadcastSettings(get().activeThemeId, altActiveThemeId)
     get().syncBroadcastOutputFor("alt")
   },
   setLive: (isLive) => set({ isLive }),
