@@ -89,8 +89,10 @@ pub fn coerce_string(arg: &OscType) -> Result<String, CommandError> {
 
 /// Parse an OSC address + arguments into a `RemoteCommand`.
 ///
-/// Handles all 8 OSC addresses under the `/rhema/` prefix
-/// (kept for backward compatibility with existing Stream Deck configs).
+/// Handles all 8 OSC addresses under the `/rhema/` prefix.
+///
+/// NOTE: The `/rhema/` prefix is kept for backward compatibility with
+/// existing Stream Deck and TouchOSC configurations. Do not rename.
 pub fn parse_osc(address: &str, args: &[OscType]) -> Result<RemoteCommand, CommandError> {
     match address {
         "/rhema/next" => Ok(RemoteCommand::Next),
