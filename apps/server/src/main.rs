@@ -141,7 +141,35 @@ async fn main() {
     let addr = format!("{}:{}", config.host, config.port);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     tracing::info!("OpenBeam server listening on http://{addr}");
-    axum::serve(listener, app).await.unwrap();
+
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .unwrap();
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install SIGTERM handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => tracing::info!("Ctrl+C received, shutting down"),
+        _ = terminate => tracing::info!("SIGTERM received, shutting down"),
+    }
 }
 
 async fn health(State(state): State<Arc<AppState>>) -> Json<Value> {
