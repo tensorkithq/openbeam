@@ -1,6 +1,6 @@
 import { useCallback, useRef } from "react"
 import { useAudioStore } from "@/stores"
-import { transcriptionSocket } from "@/services"
+import { getManager } from "@/streams/setup"
 import type { DeviceInfo } from "@/types"
 
 export function useAudio() {
@@ -47,7 +47,7 @@ export function useAudio() {
       workletNode.port.onmessage = (event) => {
         const { type } = event.data
         if (type === "audio") {
-          transcriptionSocket.sendBinary(event.data.buffer)
+          getManager().transcription.sendBinary(event.data.buffer)
         } else if (type === "level") {
           store.setLevel({ rms: event.data.rms, peak: event.data.peak })
         }
