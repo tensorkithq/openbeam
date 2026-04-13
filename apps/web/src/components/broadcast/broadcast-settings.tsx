@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { useBroadcastStore } from "@/stores"
+import { getSessionId } from "@/streams/setup"
 import {
   MonitorIcon,
   CastIcon,
@@ -58,8 +59,9 @@ export function BroadcastSettings({
     useBroadcastStore.getState().setAltActiveTheme(id)
   }
 
-  const overlayUrl = `${window.location.origin}/overlay.html?role=overlay`
-  const altOverlayUrl = `${window.location.origin}/overlay.html?role=overlay&output=alt`
+  const sessionId = getSessionId()
+  const overlayUrl = `${window.location.origin}/overlay.html?role=overlay&session=${sessionId}`
+  const altOverlayUrl = `${window.location.origin}/overlay.html?role=overlay&output=alt&session=${sessionId}`
 
   const copyUrl = async (url: string, setCopied: (v: boolean) => void) => {
     try {
