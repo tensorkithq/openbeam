@@ -1,3 +1,5 @@
+mod routes;
+
 use axum::{routing::get, Json, Router};
 use serde_json::{json, Value};
 use tower_http::cors::CorsLayer;
