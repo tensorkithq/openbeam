@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import type { BroadcastTheme, VerseRenderData } from "@/types"
 import { BUILTIN_THEMES } from "@/lib/builtin-themes"
-import { overlaySocket } from "@/services"
+import { getManager } from "@/streams/setup"
 
 const THEMES_KEY = "openbeam:themes"
 const BROADCAST_SETTINGS_KEY = "openbeam:broadcast-settings"
@@ -25,7 +25,7 @@ function persistBroadcastSettings(activeThemeId: string, altActiveThemeId: strin
 }
 
 function emitTo(label: string, _event: string, payload: unknown) {
-  overlaySocket.send("verse:update", { label, ...(payload as Record<string, unknown>) })
+  getManager().overlay.send("verse:update", { label, ...(payload as Record<string, unknown>) })
 }
 
 function loadThemesFromStorage(): BroadcastTheme[] {
