@@ -73,6 +73,7 @@ export function SearchPanel() {
 
   const quickInputRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const chapterLoadRef = useRef<ReturnType<typeof setTimeout>>()
 
   const {
     translations,
@@ -318,17 +319,18 @@ export function SearchPanel() {
       })
     }
 
-    // TODO: Wire to API in WS-3 — invoke("get_chapter") replaced with stub
-    if (result.stage === "chapter" && result.matchedBook && result.chapter) {
-      bibleActions.loadChapter(result.matchedBook.book_number, result.chapter).then(verses => {
-        setQuickVersesList(verses)
-        setShowQuickVerses(true)
-      }).catch(console.error)
-    } else if (result.stage === "verse" && result.matchedBook && result.chapter) {
-      bibleActions.loadChapter(result.matchedBook.book_number, result.chapter).then(verses => {
-        setQuickVersesList(verses)
-        setShowQuickVerses(true)
-      }).catch(console.error)
+    // Debounce chapter loading to avoid firing on every keystroke
+    if (chapterLoadRef.current) clearTimeout(chapterLoadRef.current)
+
+    if ((result.stage === "chapter" || result.stage === "verse") && result.matchedBook && result.chapter) {
+      const bookNumber = result.matchedBook.book_number
+      const ch = result.chapter
+      chapterLoadRef.current = setTimeout(() => {
+        bibleActions.loadChapter(bookNumber, ch).then(verses => {
+          setQuickVersesList(verses)
+          setShowQuickVerses(true)
+        }).catch(console.error)
+      }, 300)
     } else {
       queueMicrotask(() => setShowQuickVerses(false))
     }
