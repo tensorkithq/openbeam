@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test"
 import { mockWebSocket } from "../helpers/mock-ws"
-import detectionData from "../fixtures/detection-results.json"
+import detectionData from "../fixtures/detection-results.json" with { type: "json" }
 
 test.describe("Detection", () => {
   test("shows detection results from mock WebSocket", async ({ page }) => {
