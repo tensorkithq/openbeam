@@ -9,8 +9,8 @@ mkdir -p "$DATA_DIR"
 # Check if Bible DB exists
 if [ ! -f "$DATA_DIR/openbeam.db" ]; then
   echo "Bible database not found at $DATA_DIR/openbeam.db"
-  echo "Please copy openbeam.db from the Rhema project's data pipeline."
-  echo "See: https://github.com/openbezal/rhema/tree/main/data"
+  echo "Please copy openbeam.db from the OpenBeam data pipeline."
+  echo "See: https://github.com/openbezal/openbeam/tree/main/data"
   exit 1
 fi
 
