@@ -1,7 +1,7 @@
 import { useCallback } from "react"
 import { useTranscriptStore } from "@/stores"
 import { useSettingsStore } from "@/stores/settings-store"
-import { transcriptionSocket } from "@/services"
+import { getManager } from "@/streams/setup"
 import { useAudio } from "./use-audio"
 
 export function useTranscription() {
@@ -20,14 +20,14 @@ export function useTranscription() {
 
     store.setTranscribing(true)
     store.setConnectionStatus("connecting")
-    transcriptionSocket.connect({ key: settings.deepgramApiKey })
+    getManager().transcription.connect({ key: settings.deepgramApiKey })
   }, [store, startCapture])
 
   const stopTranscription = useCallback(async () => {
     await stopCapture()
     store.setTranscribing(false)
     store.setPartial("")
-    transcriptionSocket.disconnect()
+    getManager().transcription.disconnect()
   }, [store, stopCapture])
 
   return {
