@@ -43,6 +43,7 @@ import {
 } from "lucide-react"
 import { useSettingsStore } from "@/stores"
 import { useTutorialStore } from "@/stores/tutorial-store"
+import { api } from "@/services"
 import { useSettingsDialogStore } from "@/lib/settings-dialog"
 import type { DeviceInfo } from "@/types/audio"
 
@@ -312,12 +313,116 @@ function BibleSection() {
 }
 
 function RemoteControlSection() {
+  const [oscActive, setOscActive] = useState(false)
+  const [oscPort, setOscPort] = useState(8000)
+  const [oscBoundPort, setOscBoundPort] = useState<number | null>(null)
+  const [oscLoading, setOscLoading] = useState(false)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const pollOscStatus = useCallback(async () => {
+    try {
+      const status = await api.getOscStatus()
+      setOscActive(status.active)
+      if (status.port) setOscBoundPort(status.port)
+      if (!status.active) setOscBoundPort(null)
+    } catch {
+      // Server not reachable
+    }
+  }, [])
+
+  useEffect(() => {
+    pollOscStatus()
+    pollRef.current = setInterval(pollOscStatus, 2000)
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [pollOscStatus])
+
+  const handleStartOsc = async () => {
+    setOscLoading(true)
+    try {
+      const boundPort = await api.startOsc(oscPort)
+      setOscActive(true)
+      setOscBoundPort(boundPort)
+    } catch (e) {
+      console.error("[settings] Failed to start OSC:", e)
+    } finally {
+      setOscLoading(false)
+    }
+  }
+
+  const handleStopOsc = async () => {
+    setOscLoading(true)
+    try {
+      await api.stopOsc()
+      setOscActive(false)
+      setOscBoundPort(null)
+    } catch (e) {
+      console.error("[settings] Failed to stop OSC:", e)
+    } finally {
+      setOscLoading(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <p className="text-sm text-muted-foreground">
-        Remote control (OSC / HTTP API) will be available when the backend is connected.
-      </p>
-      {/* TODO: Wire to API in WS-3 — OSC and HTTP toggle/status */}
+      <div className="flex flex-col gap-2">
+        <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          OSC Listener
+        </label>
+        <div className="flex items-center gap-3 rounded-lg border p-3">
+          <div className="flex items-center gap-2 flex-1">
+            <span
+              className={`inline-block size-2 rounded-full ${oscActive ? "bg-green-500" : "bg-muted-foreground/30"}`}
+            />
+            <span className="text-xs">
+              {oscActive
+                ? `Listening on UDP port ${oscBoundPort ?? oscPort}`
+                : "Stopped"}
+            </span>
+          </div>
+          {!oscActive ? (
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1024}
+                max={65535}
+                value={oscPort}
+                onChange={(e) => setOscPort(Number(e.target.value))}
+                className="h-7 w-20 text-xs"
+              />
+              <Button size="sm" onClick={handleStartOsc} disabled={oscLoading}>
+                Start
+              </Button>
+            </div>
+          ) : (
+            <Button size="sm" variant="outline" onClick={handleStopOsc} disabled={oscLoading}>
+              Stop
+            </Button>
+          )}
+        </div>
+        <p className="text-[0.625rem] text-muted-foreground">
+          Receives OSC messages from Stream Deck, Companion, TouchOSC, or any OSC controller.
+          Addresses use the <code className="text-[0.5625rem]">/rhema/*</code> prefix.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          HTTP Control API
+        </label>
+        <div className="flex items-center gap-3 rounded-lg border p-3">
+          <div className="flex items-center gap-2 flex-1">
+            <span className="inline-block size-2 rounded-full bg-green-500" />
+            <span className="text-xs">
+              Available at <code className="text-[0.5625rem]">POST /api/v1/control</code>
+            </span>
+          </div>
+        </div>
+        <p className="text-[0.625rem] text-muted-foreground">
+          Send JSON commands like <code className="text-[0.5625rem]">{`{"command":"next"}`}</code> to control the presentation remotely.
+        </p>
+      </div>
     </div>
   )
 }
