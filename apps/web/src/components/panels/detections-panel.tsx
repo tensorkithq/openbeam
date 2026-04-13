@@ -9,11 +9,11 @@ import { toVerseRenderData } from "@/hooks/use-broadcast"
 import type { DetectionResult } from "@/types"
 
 const SOURCE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  direct: { bg: "bg-green-500/15", text: "text-green-600", label: "Direct" },
-  contextual: { bg: "bg-blue-500/15", text: "text-blue-600", label: "Context" },
+  direct: { bg: "bg-ai-direct/15", text: "text-ai-direct", label: "Direct" },
+  contextual: { bg: "bg-ai-semantic/15", text: "text-ai-semantic", label: "Context" },
   quotation: { bg: "bg-pink-500/15", text: "text-pink-600", label: "Quote" },
-  semantic_local: { bg: "bg-indigo-500/15", text: "text-indigo-300", label: "Semantic" },
-  semantic_cloud: { bg: "bg-purple-500/15", text: "text-purple-300", label: "Cloud" },
+  semantic_local: { bg: "bg-ai-semantic/15", text: "text-ai-semantic", label: "Semantic" },
+  semantic_cloud: { bg: "bg-ai-cloud/15", text: "text-ai-cloud", label: "Cloud" },
 }
 
 function SourceBadge({ source }: { source: string }) {
@@ -115,7 +115,7 @@ export function DetectionsPanel() {
   return (
     <div
       data-slot="detections-panel"
-      className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card"
+      className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card"
     >
       <PanelHeader title="Recent detections">
         <button

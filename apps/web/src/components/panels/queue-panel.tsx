@@ -85,7 +85,7 @@ export function QueuePanel() {
   return (
     <div
       data-slot="queue-panel"
-      className="flex flex-col overflow-hidden rounded-lg border border-border bg-card"
+      className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card"
     >
       <PanelHeader title="Queue">
         <div className="flex items-center gap-2">

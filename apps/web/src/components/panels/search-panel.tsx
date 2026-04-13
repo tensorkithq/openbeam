@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react"
+import { Subject, BehaviorSubject } from "rxjs"
+import { createSearchStream, type SemanticSearchResult } from "@openbeam/streams"
 import { Button } from "@/components/ui/button"
 import { getAutocompleteSuggestion, getTabNavigationResult } from "@/lib/quick-search"
 import {
@@ -23,16 +25,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useBible, bibleActions } from "@/hooks/use-bible"
+import { bibleActions } from "@/hooks/use-bible"
 import { useBibleStore, useQueueStore } from "@/stores"
 import type { Book, Verse } from "@/types"
 import { Input } from "@/components/ui/input"
 import { searchContextWithFuse } from "@/lib/context-search"
+import { api } from "@/services"
 
 type SearchTab = "book" | "context"
 
 /** Highlights words from the query that appear in the text (like Logos AI). */
-function HighlightedText({ text, query }: { text: string; query: string }) {
+const HighlightedText = memo(function HighlightedText({ text, query }: { text: string; query: string }) {
   if (!query || query.length < 2) return <>{text}</>
 
   const queryWords = new Set(
@@ -56,7 +59,68 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
       })}
     </>
   )
-}
+})
+
+const VerseRow = memo(function VerseRow({
+  verse,
+  isSelected,
+  onClick,
+}: {
+  verse: Verse
+  isSelected: boolean
+  onClick: (verse: Verse) => void
+}) {
+  return (
+    <div
+      id={`verse-${verse.id}`}
+      onClick={() => onClick(verse)}
+      className={cn(
+        "group flex cursor-pointer items-center gap-3 rounded-lg p-3 transition-colors",
+        isSelected
+          ? "border border-primary/50 bg-primary/10"
+          : "hover:bg-muted/50"
+      )}
+    >
+      <span className="w-6 shrink-0 text-right text-sm font-semibold text-primary">
+        {verse.verse}
+      </span>
+      <p className="flex-1 text-sm leading-relaxed text-foreground/80">
+        {verse.text}
+      </p>
+      {isSelected && (
+        <CheckIcon className="size-4 shrink-0 text-ai-direct" />
+      )}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className={cn(
+              "shrink-0 opacity-0 group-hover:opacity-100 transition-opacity",
+              isSelected
+                ? "hover:bg-primary/20 hover:text-primary"
+                : "bg-primary/40! text-primary-foreground hover:bg-primary!"
+            )}
+            onClick={(e) => {
+              e.stopPropagation()
+              useQueueStore.getState().addItem({
+                id: crypto.randomUUID(),
+                verse,
+                reference: `${verse.book_name} ${verse.chapter}:${verse.verse}`,
+                confidence: 1,
+                source: "manual",
+                added_at: Date.now(),
+              })
+            }}
+          >
+            <PlusIcon className="size-3" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">Add to queue</TooltipContent>
+      </Tooltip>
+    </div>
+  )
+})
 
 export function SearchPanel() {
   const [activeTab, setActiveTab] = useState<SearchTab>("book")
@@ -75,14 +139,13 @@ export function SearchPanel() {
   const panelRef = useRef<HTMLDivElement>(null)
   const chapterLoadRef = useRef<ReturnType<typeof setTimeout>>()
 
-  const {
-    translations,
-    books,
-    currentChapter,
-    semanticResults,
-    activeTranslationId,
-    selectedVerse,
-  } = useBible()
+  // Subscribe to individual slices to avoid re-rendering the entire panel on unrelated changes
+  const translations = useBibleStore((s) => s.translations)
+  const books = useBibleStore((s) => s.books)
+  const currentChapter = useBibleStore((s) => s.currentChapter)
+  const semanticResults = useBibleStore((s) => s.semanticResults)
+  const activeTranslationId = useBibleStore((s) => s.activeTranslationId)
+  const selectedVerse = useBibleStore((s) => s.selectedVerse)
 
   const quickSuggestion = useMemo(
     () => getAutocompleteSuggestion(quickInput, books).suggestion,
@@ -166,7 +229,10 @@ export function SearchPanel() {
             .getElementById(`verse-${target.id}`)
             ?.scrollIntoView({ behavior: "smooth", block: "center" })
         }
-        panelRef.current?.focus()
+        // Only focus the panel if no input is currently focused
+        if (!(document.activeElement instanceof HTMLInputElement)) {
+          panelRef.current?.focus()
+        }
       }).catch(console.error).finally(() => {
         useBibleStore.getState().setPendingNavigation(null)
       })
@@ -229,83 +295,42 @@ export function SearchPanel() {
     [chapter, currentChapter, effectiveSelectedVerseId]
   )
 
-  const contextDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const contextSearchRequestIdRef = useRef(0)
+  // RxJS search stream — replaces manual debounce + requestId + fallback chain
+  const [contextQuery$] = useState(() => new Subject<string>())
+  const [translationId$] = useState(() => new BehaviorSubject(activeTranslationId))
 
-  const runContextSearch = useCallback(async (query: string, translationId: number) => {
-    const requestId = ++contextSearchRequestIdRef.current
+  useEffect(() => {
+    translationId$.next(activeTranslationId)
+  }, [activeTranslationId, translationId$])
 
-    try {
-      const fuseResults = await searchContextWithFuse(query, translationId, 15)
-      if (requestId !== contextSearchRequestIdRef.current) return
-
-      if (fuseResults.length > 0) {
-        useBibleStore.getState().setSemanticResults(fuseResults)
-        return
-      }
-
-      const ftsResults = await bibleActions.searchVerses(query, 20, translationId)
-      if (requestId !== contextSearchRequestIdRef.current) return
-      if (ftsResults.length > 0) {
-        const mapped = ftsResults.slice(0, 15).map((v, idx) => ({
-          verse_ref: `${v.book_name} ${v.chapter}:${v.verse}`,
-          verse_text: v.text,
-          book_name: v.book_name,
-          book_number: v.book_number,
-          chapter: v.chapter,
-          verse: v.verse,
-          similarity: Math.max(0.5, 0.72 - idx * 0.015),
-        }))
-        useBibleStore.getState().setSemanticResults(mapped)
-        return
-      }
-
-      // TODO: Wire to API in WS-3 — semantic_search invoke replaced with stub
-      const semanticResults: Array<{
-        verse_ref: string
-        verse_text: string
-        book_name: string
-        book_number: number
-        chapter: number
-        verse: number
-        similarity: number
-      }> = []
-      if (requestId !== contextSearchRequestIdRef.current) return
-      useBibleStore.getState().setSemanticResults(semanticResults)
-    } catch (err) {
-      console.warn("Context search failed:", err)
-      if (requestId !== contextSearchRequestIdRef.current) return
-      useBibleStore.getState().setSemanticResults([])
-    }
-  }, [])
+  useEffect(() => {
+    const stream = createSearchStream({
+      query$: contextQuery$,
+      translationId$,
+      fuseSearch: searchContextWithFuse,
+      ftsSearch: (q, tid, limit) =>
+        api.searchVerses(q, tid, limit).then((verses) =>
+          verses.slice(0, 15).map((v, idx): SemanticSearchResult => ({
+            verse_ref: `${v.book_name} ${v.chapter}:${v.verse}`,
+            verse_text: v.text,
+            book_name: v.book_name,
+            book_number: v.book_number,
+            chapter: v.chapter,
+            verse: v.verse,
+            similarity: Math.max(0.5, 0.72 - idx * 0.015),
+          })),
+        ),
+    })
+    const sub = stream.results$.subscribe((results) => {
+      useBibleStore.getState().setSemanticResults(results)
+    })
+    return () => sub.unsubscribe()
+  }, [contextQuery$, translationId$])
 
   const handleContextSearch = useCallback((query: string) => {
     setContextQuery(query)
-    if (contextDebounceRef.current) clearTimeout(contextDebounceRef.current)
-    if (query.length >= 5) {
-      const translationId = useBibleStore.getState().activeTranslationId
-      contextDebounceRef.current = setTimeout(() => {
-        runContextSearch(query, translationId).catch(console.error)
-      }, 280)
-    } else {
-      contextSearchRequestIdRef.current += 1
-      useBibleStore.getState().setSemanticResults([])
-    }
-  }, [runContextSearch])
-
-  useEffect(() => {
-    if (activeTab !== "context" || contextQuery.length < 5) return
-    if (contextDebounceRef.current) clearTimeout(contextDebounceRef.current)
-    contextDebounceRef.current = setTimeout(() => {
-      runContextSearch(contextQuery, activeTranslationId).catch(console.error)
-    }, 120)
-  }, [activeTranslationId, activeTab, contextQuery, runContextSearch])
-
-  useEffect(() => {
-    return () => {
-      if (contextDebounceRef.current) clearTimeout(contextDebounceRef.current)
-    }
-  }, [])
+    contextQuery$.next(query)
+  }, [contextQuery$])
 
   // EasyWorship-style autocomplete logic
   useEffect(() => {
@@ -551,55 +576,12 @@ export function SearchPanel() {
             <div className="flex flex-col gap-0 p-2">
               <TooltipProvider>
                 {currentChapter.map((verse) => (
-                  <div
+                  <VerseRow
                     key={verse.id}
-                    id={`verse-${verse.id}`}
-                    onClick={() => handleVerseClick(verse)}
-                    className={cn(
-                      "group flex cursor-pointer items-center gap-3 rounded-lg p-3 transition-colors",
-                      verse.id === effectiveSelectedVerseId
-                        ? "border border-primary/50 bg-primary/10"
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    <span className="w-6 shrink-0 text-right text-sm font-semibold text-primary">
-                      {verse.verse}
-                    </span>
-                    <p className="flex-1 text-sm leading-relaxed text-foreground/80">
-                      {verse.text}
-                    </p>
-                    {verse.id === effectiveSelectedVerseId && (
-                      <CheckIcon className="size-4 shrink-0 text-ai-direct" />
-                    )}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className={cn(
-                            "shrink-0 opacity-0 group-hover:opacity-100 transition-opacity",
-                            verse.id === effectiveSelectedVerseId
-                              ? "hover:bg-primary/20 hover:text-primary"
-                              : "bg-primary/40! text-primary-foreground hover:bg-primary!"
-                          )}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            useQueueStore.getState().addItem({
-                              id: crypto.randomUUID(),
-                              verse,
-                              reference: `${verse.book_name} ${verse.chapter}:${verse.verse}`,
-                              confidence: 1,
-                              source: "manual",
-                              added_at: Date.now(),
-                            })
-                          }}
-                        >
-                          <PlusIcon className="size-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="left">Add to queue</TooltipContent>
-                    </Tooltip>
-                  </div>
+                    verse={verse}
+                    isSelected={verse.id === effectiveSelectedVerseId}
+                    onClick={handleVerseClick}
+                  />
                 ))}
               </TooltipProvider>
             </div>
