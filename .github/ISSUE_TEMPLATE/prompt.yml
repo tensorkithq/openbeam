@@ -1,0 +1,28 @@
+name: Prompt
+description: Submit a prompt describing what you want built, fixed, or changed.
+labels: ["prompt"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write your issue as a clear instruction an AI agent could act on in one shot.
+
+  - type: textarea
+    id: prompt
+    attributes:
+      label: Prompt
+      description: What should change? Be specific about the goal, location, and expected behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: File paths, error logs, screenshots, or references.
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: How to verify
+      description: How should someone confirm this is done?

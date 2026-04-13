@@ -1,0 +1,26 @@
+name: Bug Prompt
+description: Report a bug as a prompt — what's broken and what it should do instead.
+labels: ["bug", "prompt"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the bug and the fix as a direct instruction an AI agent could execute.
+
+  - type: textarea
+    id: prompt
+    attributes:
+      label: Bug prompt
+      description: What's broken? What should it do instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error logs / screenshots
