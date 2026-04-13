@@ -33,6 +33,8 @@ fn find_bible_db(configured_path: &str) -> PathBuf {
 
 #[tokio::main]
 async fn main() {
+    dotenvy::dotenv().ok();
+
     tracing_subscriber::registry()
         .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info,tower_http=debug".into()))
         .with(fmt::layer().with_target(true).with_thread_ids(false))
