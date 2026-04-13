@@ -17,12 +17,13 @@ pub struct DetectRequest {
 
 #[derive(Serialize)]
 pub struct DetectionResult {
-    pub book_number: i32,
+    pub verse_ref: String,
+    pub verse_text: String,
     pub book_name: String,
+    pub book_number: i32,
     pub chapter: i32,
-    pub verse_start: i32,
+    pub verse: i32,
     pub verse_end: Option<i32>,
-    pub verse_id: Option<i64>,
     pub confidence: f64,
     pub source: String,
     pub transcript_snippet: String,
@@ -42,7 +43,12 @@ fn default_k() -> usize {
 
 #[derive(Serialize)]
 pub struct SemanticSearchResult {
-    pub verse_id: i64,
+    pub verse_ref: String,
+    pub verse_text: String,
+    pub book_name: String,
+    pub book_number: i32,
+    pub chapter: i32,
+    pub verse: i32,
     pub similarity: f64,
 }
 
@@ -53,31 +59,43 @@ pub struct DetectionStatus {
     pub has_cloud: bool,
 }
 
-fn merged_to_result(m: &MergedDetection) -> DetectionResult {
-    let source = match &m.detection.source {
+fn format_verse_ref(book_name: &str, chapter: i32, verse: i32, verse_end: Option<i32>) -> String {
+    match verse_end {
+        Some(end) if end != verse => format!("{book_name} {chapter}:{verse}-{end}"),
+        _ => format!("{book_name} {chapter}:{verse}"),
+    }
+}
+
+fn source_label(source: &openbeam_detection::DetectionSource) -> String {
+    match source {
         openbeam_detection::DetectionSource::DirectReference => "direct".to_string(),
         openbeam_detection::DetectionSource::Contextual => "contextual".to_string(),
-        openbeam_detection::DetectionSource::QuotationMatch { similarity } => {
-            format!("quotation:{similarity:.2}")
-        }
-        openbeam_detection::DetectionSource::SemanticLocal { similarity } => {
-            format!("semantic_local:{similarity:.2}")
-        }
-        openbeam_detection::DetectionSource::SemanticCloud { similarity } => {
-            format!("semantic_cloud:{similarity:.2}")
-        }
+        openbeam_detection::DetectionSource::QuotationMatch { .. } => "quotation".to_string(),
+        openbeam_detection::DetectionSource::SemanticLocal { .. } => "semantic_local".to_string(),
+        openbeam_detection::DetectionSource::SemanticCloud { .. } => "semantic_cloud".to_string(),
         other => format!("{other:?}"),
-    };
+    }
+}
+
+fn merged_to_result(m: &MergedDetection, bible_db: &openbeam_bible::BibleDb) -> DetectionResult {
+    let ref_ = &m.detection.verse_ref;
+    let verse_text = bible_db
+        .get_verse(1, ref_.book_number, ref_.chapter, ref_.verse_start)
+        .ok()
+        .flatten()
+        .map(|v| v.text)
+        .unwrap_or_default();
 
     DetectionResult {
-        book_number: m.detection.verse_ref.book_number,
-        book_name: m.detection.verse_ref.book_name.clone(),
-        chapter: m.detection.verse_ref.chapter,
-        verse_start: m.detection.verse_ref.verse_start,
-        verse_end: m.detection.verse_ref.verse_end,
-        verse_id: m.detection.verse_id,
+        verse_ref: format_verse_ref(&ref_.book_name, ref_.chapter, ref_.verse_start, ref_.verse_end),
+        verse_text,
+        book_name: ref_.book_name.clone(),
+        book_number: ref_.book_number,
+        chapter: ref_.chapter,
+        verse: ref_.verse_start,
+        verse_end: ref_.verse_end,
         confidence: m.detection.confidence,
-        source,
+        source: source_label(&m.detection.source),
         transcript_snippet: m.detection.transcript_snippet.clone(),
         auto_queued: m.auto_queued,
     }
@@ -90,7 +108,7 @@ pub async fn detect(
 ) -> Result<Json<Vec<DetectionResult>>, DetectionError> {
     let mut pipeline = state.detection_pipeline.lock().await;
     let results = pipeline.process(&body.text);
-    Ok(Json(results.iter().map(merged_to_result).collect()))
+    Ok(Json(results.iter().map(|m| merged_to_result(m, &state.bible_db)).collect()))
 }
 
 /// POST /api/detection/semantic -- standalone semantic search.
@@ -103,9 +121,17 @@ pub async fn semantic_search(
     Ok(Json(
         results
             .into_iter()
-            .map(|(verse_id, similarity)| SemanticSearchResult {
-                verse_id,
-                similarity,
+            .filter_map(|(verse_id, similarity)| {
+                let v = state.bible_db.get_verse_by_id(verse_id).ok()??;
+                Some(SemanticSearchResult {
+                    verse_ref: format_verse_ref(&v.book_name, v.chapter, v.verse, None),
+                    verse_text: v.text,
+                    book_name: v.book_name,
+                    book_number: v.book_number,
+                    chapter: v.chapter,
+                    verse: v.verse,
+                    similarity,
+                })
             })
             .collect(),
     ))
@@ -119,25 +145,28 @@ pub async fn quotation_search(
     let matcher = state.quotation_matcher.lock().await;
     let detections = matcher.match_transcript(&body.text);
 
-    // Wrap raw detections in MergedDetection for uniform output
     let results: Vec<DetectionResult> = detections
         .iter()
         .map(|d| {
-            let source = match &d.source {
-                openbeam_detection::DetectionSource::QuotationMatch { similarity } => {
-                    format!("quotation:{similarity:.2}")
-                }
-                other => format!("{other:?}"),
-            };
+            let ref_ = &d.verse_ref;
+            let verse_text = state
+                .bible_db
+                .get_verse(1, ref_.book_number, ref_.chapter, ref_.verse_start)
+                .ok()
+                .flatten()
+                .map(|v| v.text)
+                .unwrap_or_default();
+
             DetectionResult {
-                book_number: d.verse_ref.book_number,
-                book_name: d.verse_ref.book_name.clone(),
-                chapter: d.verse_ref.chapter,
-                verse_start: d.verse_ref.verse_start,
-                verse_end: d.verse_ref.verse_end,
-                verse_id: d.verse_id,
+                verse_ref: format_verse_ref(&ref_.book_name, ref_.chapter, ref_.verse_start, ref_.verse_end),
+                verse_text,
+                book_name: ref_.book_name.clone(),
+                book_number: ref_.book_number,
+                chapter: ref_.chapter,
+                verse: ref_.verse_start,
+                verse_end: ref_.verse_end,
                 confidence: d.confidence,
-                source,
+                source: source_label(&d.source),
                 transcript_snippet: d.transcript_snippet.clone(),
                 auto_queued: false,
             }
