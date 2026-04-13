@@ -547,28 +547,28 @@ export function SearchPanel() {
 
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="flex flex-col gap-0 p-2">
-              {currentChapter.map((verse) => (
-                <div
-                  key={verse.id}
-                  id={`verse-${verse.id}`}
-                  onClick={() => handleVerseClick(verse)}
-                  className={cn(
-                    "group flex cursor-pointer items-center gap-3 rounded-lg p-3 transition-colors",
-                    verse.id === effectiveSelectedVerseId
-                      ? "border border-primary/50 bg-primary/10"
-                      : "hover:bg-muted/50"
-                  )}
-                >
-                  <span className="w-6 shrink-0 text-right text-sm font-semibold text-primary">
-                    {verse.verse}
-                  </span>
-                  <p className="flex-1 text-sm leading-relaxed text-foreground/80">
-                    {verse.text}
-                  </p>
-                  {verse.id === effectiveSelectedVerseId && (
-                    <CheckIcon className="size-4 shrink-0 text-ai-direct" />
-                  )}
-                  <TooltipProvider>
+              <TooltipProvider>
+                {currentChapter.map((verse) => (
+                  <div
+                    key={verse.id}
+                    id={`verse-${verse.id}`}
+                    onClick={() => handleVerseClick(verse)}
+                    className={cn(
+                      "group flex cursor-pointer items-center gap-3 rounded-lg p-3 transition-colors",
+                      verse.id === effectiveSelectedVerseId
+                        ? "border border-primary/50 bg-primary/10"
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    <span className="w-6 shrink-0 text-right text-sm font-semibold text-primary">
+                      {verse.verse}
+                    </span>
+                    <p className="flex-1 text-sm leading-relaxed text-foreground/80">
+                      {verse.text}
+                    </p>
+                    {verse.id === effectiveSelectedVerseId && (
+                      <CheckIcon className="size-4 shrink-0 text-ai-direct" />
+                    )}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -597,9 +597,9 @@ export function SearchPanel() {
                       </TooltipTrigger>
                       <TooltipContent side="left">Add to queue</TooltipContent>
                     </Tooltip>
-                  </TooltipProvider>
-                </div>
-              ))}
+                  </div>
+                ))}
+              </TooltipProvider>
             </div>
           </div>
         </>
@@ -618,37 +618,37 @@ export function SearchPanel() {
                 No results found
               </p>
             )}
-            {semanticResults.map((result, idx) => (
-              <div
-                key={`${result.book_number}-${result.chapter}-${result.verse}-${idx}`}
-                onClick={() => {
-                  bibleActions.selectVerse({
-                    id: 0,
-                    translation_id: activeTranslationId,
-                    book_number: result.book_number,
-                    book_name: result.book_name,
-                    book_abbreviation: "",
-                    chapter: result.chapter,
-                    verse: result.verse,
-                    text: result.verse_text,
-                  })
-                }}
-                className="group flex flex-col cursor-pointer gap-1 rounded-lg p-3 transition-colors hover:bg-muted/50 relative"
-              >
-                <div className="flex shrink-0 flex-row items-start gap-2">
-                  <span className="text-xs font-semibold ">
-                    {result.book_name}   {result.chapter}:{result.verse}
-                  </span>
-                  <span
-                    className="mt-0.5 text-[0.5rem] text-muted-foreground"
-                  >
-                    {Math.round(result.similarity * 100)}%
-                  </span>
-                </div>
-                <p className="flex-1 text-xs leading-relaxed text-muted-foreground">
-                  <HighlightedText text={result.verse_text} query={contextQuery} />
-                </p>
-                <TooltipProvider>
+            <TooltipProvider>
+              {semanticResults.map((result) => (
+                <div
+                  key={`${result.book_number}-${result.chapter}-${result.verse}`}
+                  onClick={() => {
+                    bibleActions.selectVerse({
+                      id: 0,
+                      translation_id: activeTranslationId,
+                      book_number: result.book_number,
+                      book_name: result.book_name,
+                      book_abbreviation: "",
+                      chapter: result.chapter,
+                      verse: result.verse,
+                      text: result.verse_text,
+                    })
+                  }}
+                  className="group flex flex-col cursor-pointer gap-1 rounded-lg p-3 transition-colors hover:bg-muted/50 relative"
+                >
+                  <div className="flex shrink-0 flex-row items-start gap-2">
+                    <span className="text-xs font-semibold ">
+                      {result.book_name}   {result.chapter}:{result.verse}
+                    </span>
+                    <span
+                      className="mt-0.5 text-[0.5rem] text-muted-foreground"
+                    >
+                      {Math.round(result.similarity * 100)}%
+                    </span>
+                  </div>
+                  <p className="flex-1 text-xs leading-relaxed text-muted-foreground">
+                    <HighlightedText text={result.verse_text} query={contextQuery} />
+                  </p>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -681,9 +681,9 @@ export function SearchPanel() {
                     </TooltipTrigger>
                     <TooltipContent side="left">Add to queue</TooltipContent>
                   </Tooltip>
-                </TooltipProvider>
-              </div>
-            ))}
+                </div>
+              ))}
+            </TooltipProvider>
           </div>
         </div>
       )}
