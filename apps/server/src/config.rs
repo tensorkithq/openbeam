@@ -8,6 +8,7 @@ pub struct Config {
     pub openrouter_embed_dim: usize,
     pub db_path: String,
     pub log_level: String,
+    pub static_dir: Option<String>,
 }
 
 impl Config {
@@ -27,6 +28,7 @@ impl Config {
                 .unwrap_or(4096),
             db_path: env::var("DB_PATH").unwrap_or_else(|_| "./data/openbeam.db".to_string()),
             log_level: env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()),
+            static_dir: env::var("STATIC_DIR").ok(),
         }
     }
 
@@ -49,6 +51,10 @@ impl Config {
             } else {
                 "NOT SET"
             }
+        );
+        tracing::info!(
+            "  static_dir: {}",
+            self.static_dir.as_deref().unwrap_or("(none — API only)")
         );
     }
 }

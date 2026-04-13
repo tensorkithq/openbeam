@@ -10,6 +10,7 @@ use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
+use tower_http::services::{ServeDir, ServeFile};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{fmt, EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -138,6 +139,23 @@ async fn main() {
         )
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive());
+
+    // Serve the SPA static files in production (STATIC_DIR env var)
+    let app = if let Some(static_dir) = config.static_dir.as_ref() {
+        let static_path = Path::new(static_dir);
+        if static_path.exists() {
+            let index = static_path.join("index.html");
+            tracing::info!("Serving static files from {static_dir}");
+            app.fallback_service(
+                ServeDir::new(static_dir).fallback(ServeFile::new(index)),
+            )
+        } else {
+            tracing::warn!("STATIC_DIR={static_dir} does not exist, skipping static file serving");
+            app
+        }
+    } else {
+        app
+    };
 
     let addr = format!("{}:{}", config.host, config.port);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
