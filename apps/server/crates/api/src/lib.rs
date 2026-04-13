@@ -1,7 +1,7 @@
 //! Remote control API for OpenBeam.
 //!
 //! Implements: OSC server (UDP/rosc), WebSocket command sink,
-//! shared status snapshot. Adapted from rhema-api.
+//! shared status snapshot.
 
 pub mod coerce;
 pub mod command;
