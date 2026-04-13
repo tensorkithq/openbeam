@@ -1,13 +1,9 @@
 import Fuse from "fuse.js"
 import type { SemanticSearchResult } from "@/types/detection"
+import { api } from "@/services"
+import type { VersesForSearchRow } from "@/services"
 
-type VerseSearchRow = {
-  book_number: number
-  book_name: string
-  chapter: number
-  verse: number
-  text: string
-}
+type VerseSearchRow = VersesForSearchRow
 
 type ContextSearchDoc = SemanticSearchResult
 
@@ -16,9 +12,8 @@ const MIN_SIMILARITY = 0.55
 
 const fuseByTranslation = new Map<number, Fuse<ContextSearchDoc>>()
 
-// TODO: Wire to API in WS-3
-async function fetchVersesForSearch(_translationId: number): Promise<VerseSearchRow[]> {
-  return []
+async function fetchVersesForSearch(translationId: number): Promise<VerseSearchRow[]> {
+  return api.getTranslationVersesForSearch(translationId)
 }
 
 function normalizeQuery(query: string) {
