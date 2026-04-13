@@ -1,10 +1,10 @@
 <p align="center">
-  <h1 align="center">OpenBeam</h1>
-  <p align="center">
-    Real-time Bible verse detection for live sermons — in your browser.
-    <br />
-    <a href="https://openbeam.tensorkit.net"><strong>Try it live</strong></a> &middot; <a href="https://github.com/openbezal/rhema">Rhema Desktop</a> &middot; <a href="#quick-start">Quick Start</a>
-  </p>
+  <img src="./beamer.png" alt="OpenBeam" height="80" />
+</p>
+<p align="center">
+  Real-time Bible verse detection for live sermons — in your browser.
+  <br />
+  <a href="https://openbeam.tensorkit.net"><strong>Try it live</strong></a> &middot; <a href="https://github.com/openbezal/rhema">Rhema Desktop</a> &middot; <a href="#quick-start">Quick Start</a>
 </p>
 
 ---
