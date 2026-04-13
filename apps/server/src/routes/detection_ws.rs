@@ -6,7 +6,7 @@ use axum::{
     response::IntoResponse,
 };
 use openbeam_bible::BibleDb;
-use openbeam_detection::{SentenceBuffer, SermonContext};
+use openbeam_detection::{DetectionMerger, SentenceBuffer, SermonContext};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -72,6 +72,7 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>, bible_db: Ar
     // Per-connection state
     let mut buffer = SentenceBuffer::new();
     let mut context = SermonContext::new();
+    let mut merger = DetectionMerger::new();
 
     while let Some(Ok(msg)) = socket.recv().await {
         let text = match msg {
@@ -96,30 +97,46 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>, bible_db: Ar
         // Determine processing strategy based on message type
         let results = match incoming.msg_type.as_str() {
             "transcript:final" => {
-                // Accumulate in sentence buffer; run direct detection on each fragment
                 let mut all_results = Vec::new();
 
-                // Always run direct detection on the raw fragment
+                // Direct detection on raw fragment
                 {
                     let mut pipeline = state.detection_pipeline.lock().await;
-                    let direct = pipeline.process_direct(&transcript);
-                    all_results.extend(direct);
+                    let direct = pipeline.detect_direct(&transcript);
+                    all_results.extend(merger.merge(direct, vec![]));
                 }
 
-                // Buffer for semantic: flush on sentence boundary
+                // Buffer for semantic + quotation: flush on sentence boundary
                 if let Some(sentence) = buffer.append(&transcript) {
                     let mut pipeline = state.detection_pipeline.lock().await;
-                    let semantic = pipeline.process_semantic(&sentence);
-                    all_results.extend(semantic);
+                    let semantic = pipeline.detect_semantic(&sentence);
+                    drop(pipeline);
+
+                    let quotation_matcher = state.quotation_matcher.lock().await;
+                    let quotation = quotation_matcher.match_transcript(&sentence);
+                    drop(quotation_matcher);
+
+                    all_results.extend(merger.merge_all(vec![], semantic, quotation));
                 }
 
                 all_results
             }
             "transcript:speech_final" => {
-                // Force-flush the buffer and run full pipeline
                 let flushed = buffer.force_flush().unwrap_or(transcript.clone());
+
+                // Run direct + semantic via pipeline
                 let mut pipeline = state.detection_pipeline.lock().await;
-                pipeline.process(&flushed)
+                let direct = pipeline.detect_direct(&flushed);
+                let semantic = pipeline.detect_semantic(&flushed);
+                drop(pipeline);
+
+                // Run quotation on accumulated text
+                let quotation_matcher = state.quotation_matcher.lock().await;
+                let quotation = quotation_matcher.match_transcript(&flushed);
+                drop(quotation_matcher);
+
+                // Merge all three with per-connection merger
+                merger.merge_all(direct, semantic, quotation)
             }
             _ => {
                 tracing::debug!("unknown ws message type: {}", incoming.msg_type);
