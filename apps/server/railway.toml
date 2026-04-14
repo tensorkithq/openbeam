@@ -1,10 +1,12 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cargo build --release"
-watchPatterns = ["src/**", "crates/**", "Cargo.toml", "Cargo.lock"]
+# Railway root directory should be set to repo root (not apps/server)
+# so nixpacks resolves the full workspace correctly
+buildCommand = "cd apps/server && cargo build --release"
+watchPatterns = ["apps/server/**"]
 
 [deploy]
-startCommand = "./target/release/openbeam-server"
+startCommand = "cd apps/server && ./target/release/openbeam-server"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
