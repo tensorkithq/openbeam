@@ -10,13 +10,8 @@ async function detectVerses(text: string) {
   return results
 }
 
-async function getDetectionStatus() {
-  return api.detectionStatus()
-}
-
 export const detectionActions = {
   detectVerses,
-  getDetectionStatus,
   clearDetections: () => useDetectionStore.getState().clearDetections(),
   removeDetection: (verseRef: string) =>
     useDetectionStore.getState().removeDetection(verseRef),
