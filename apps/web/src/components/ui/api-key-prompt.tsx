@@ -14,7 +14,6 @@ import { useSettingsStore } from "@/stores/settings-store"
 export function ApiKeyPrompt() {
   const deepgramApiKey = useSettingsStore((s) => s.deepgramApiKey)
   const setDeepgramApiKey = useSettingsStore((s) => s.setDeepgramApiKey)
-  const setOnboardingComplete = useSettingsStore((s) => s.setOnboardingComplete)
   const [keyValue, setKeyValue] = useState("")
   const [error, setError] = useState("")
 
@@ -27,7 +26,6 @@ export function ApiKeyPrompt() {
       return
     }
     setDeepgramApiKey(trimmed)
-    setOnboardingComplete(true)
     setKeyValue("")
     setError("")
   }
