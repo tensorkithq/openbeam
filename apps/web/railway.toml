@@ -1,8 +1,0 @@
-[build]
-builder = "nixpacks"
-# Railway root directory should be set to repo root (not apps/web)
-# so the full pnpm workspace is available
-buildCommand = "npm i -g pnpm && pnpm install --frozen-lockfile && pnpm --filter @openbeam/web build"
-
-[deploy]
-startCommand = "npx serve apps/web/build -s -l tcp://0.0.0.0:$PORT"
