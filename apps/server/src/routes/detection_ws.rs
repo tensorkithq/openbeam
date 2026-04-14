@@ -140,21 +140,26 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>, bible_db: Ar
                 for det in &direct {
                     if matches!(det.source, DetectionSource::DirectReference) {
                         let ref_ = &det.verse_ref;
-                        if let Ok(chapter_verses) = bible_db.get_chapter(translation_id, ref_.book_number, ref_.chapter) {
-                            let verses_data: Vec<(i32, String)> = chapter_verses
-                                .iter()
-                                .map(|v| (v.verse, v.text.clone()))
-                                .collect();
-                            reading_mode.start(
-                                ref_.book_number,
-                                &ref_.book_name,
-                                ref_.chapter,
-                                ref_.verse_start,
-                                verses_data,
-                            );
-                            tracing::info!(
-                                "[READING] Activated: {} {}:{}", ref_.book_name, ref_.chapter, ref_.verse_start
-                            );
+                        match bible_db.get_chapter(translation_id, ref_.book_number, ref_.chapter) {
+                            Ok(chapter_verses) => {
+                                let verses_data: Vec<(i32, String)> = chapter_verses
+                                    .iter()
+                                    .map(|v| (v.verse, v.text.clone()))
+                                    .collect();
+                                reading_mode.start(
+                                    ref_.book_number,
+                                    &ref_.book_name,
+                                    ref_.chapter,
+                                    ref_.verse_start,
+                                    verses_data,
+                                );
+                                tracing::info!(
+                                    "[READING] Activated: {} {}:{}", ref_.book_name, ref_.chapter, ref_.verse_start
+                                );
+                            }
+                            Err(e) => {
+                                tracing::warn!("[READING] Failed to load chapter for reading mode: {e}");
+                            }
                         }
                     }
                 }
@@ -173,35 +178,40 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>, bible_db: Ar
                     tracing::info!(
                         "[READING] Chapter change: {} {}", chapter_change.book_name, chapter_change.new_chapter
                     );
-                    if let Ok(new_verses) = bible_db.get_chapter(translation_id, chapter_change.book_number, chapter_change.new_chapter) {
-                        let verses_data: Vec<(i32, String)> = new_verses
-                            .iter()
-                            .map(|v| (v.verse, v.text.clone()))
-                            .collect();
-                        reading_mode.start(
-                            chapter_change.book_number,
-                            &chapter_change.book_name,
-                            chapter_change.new_chapter,
-                            1,
-                            verses_data,
-                        );
-                        // Emit verse 1 of the new chapter
-                        if let Some(first) = new_verses.first() {
-                            let det = Detection {
-                                verse_ref: VerseRef {
-                                    book_number: chapter_change.book_number,
-                                    book_name: chapter_change.book_name.clone(),
-                                    chapter: chapter_change.new_chapter,
-                                    verse_start: first.verse,
-                                    verse_end: None,
-                                },
-                                verse_id: None,
-                                confidence: 1.0,
-                                source: DetectionSource::Contextual,
-                                transcript_snippet: transcript.clone(),
-                                detected_at: now_ms(),
-                            };
-                            all_results.extend(merger.merge(vec![det], vec![]));
+                    match bible_db.get_chapter(translation_id, chapter_change.book_number, chapter_change.new_chapter) {
+                        Ok(new_verses) => {
+                            let verses_data: Vec<(i32, String)> = new_verses
+                                .iter()
+                                .map(|v| (v.verse, v.text.clone()))
+                                .collect();
+                            reading_mode.start(
+                                chapter_change.book_number,
+                                &chapter_change.book_name,
+                                chapter_change.new_chapter,
+                                1,
+                                verses_data,
+                            );
+                            // Emit verse 1 of the new chapter
+                            if let Some(first) = new_verses.first() {
+                                let det = Detection {
+                                    verse_ref: VerseRef {
+                                        book_number: chapter_change.book_number,
+                                        book_name: chapter_change.book_name.clone(),
+                                        chapter: chapter_change.new_chapter,
+                                        verse_start: first.verse,
+                                        verse_end: None,
+                                    },
+                                    verse_id: None,
+                                    confidence: 1.0,
+                                    source: DetectionSource::Contextual,
+                                    transcript_snippet: transcript.clone(),
+                                    detected_at: now_ms(),
+                                };
+                                all_results.extend(merger.merge(vec![det], vec![]));
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("[READING] Failed to load new chapter: {e}");
                         }
                     }
                 }
@@ -234,14 +244,22 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>, bible_db: Ar
                 for det in &direct {
                     if matches!(det.source, DetectionSource::DirectReference) {
                         let ref_ = &det.verse_ref;
-                        if let Ok(chapter_verses) = bible_db.get_chapter(translation_id, ref_.book_number, ref_.chapter) {
-                            let verses_data: Vec<(i32, String)> = chapter_verses
-                                .iter()
-                                .map(|v| (v.verse, v.text.clone()))
-                                .collect();
-                            reading_mode.start(
-                                ref_.book_number, &ref_.book_name, ref_.chapter, ref_.verse_start, verses_data,
-                            );
+                        match bible_db.get_chapter(translation_id, ref_.book_number, ref_.chapter) {
+                            Ok(chapter_verses) => {
+                                let verses_data: Vec<(i32, String)> = chapter_verses
+                                    .iter()
+                                    .map(|v| (v.verse, v.text.clone()))
+                                    .collect();
+                                reading_mode.start(
+                                    ref_.book_number, &ref_.book_name, ref_.chapter, ref_.verse_start, verses_data,
+                                );
+                                tracing::info!(
+                                    "[READING] Activated: {} {}:{}", ref_.book_name, ref_.chapter, ref_.verse_start
+                                );
+                            }
+                            Err(e) => {
+                                tracing::warn!("[READING] Failed to load chapter for reading mode: {e}");
+                            }
                         }
                     }
                 }
@@ -260,30 +278,38 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>, bible_db: Ar
                 }
 
                 if let Some(chapter_change) = reading_mode.check_chapter_command(&flushed) {
-                    if let Ok(new_verses) = bible_db.get_chapter(translation_id, chapter_change.book_number, chapter_change.new_chapter) {
-                        let verses_data: Vec<(i32, String)> = new_verses
-                            .iter()
-                            .map(|v| (v.verse, v.text.clone()))
-                            .collect();
-                        reading_mode.start(
-                            chapter_change.book_number, &chapter_change.book_name, chapter_change.new_chapter, 1, verses_data,
-                        );
-                        if let Some(first) = new_verses.first() {
-                            let det = Detection {
-                                verse_ref: VerseRef {
-                                    book_number: chapter_change.book_number,
-                                    book_name: chapter_change.book_name.clone(),
-                                    chapter: chapter_change.new_chapter,
-                                    verse_start: first.verse,
-                                    verse_end: None,
-                                },
-                                verse_id: None,
-                                confidence: 1.0,
-                                source: DetectionSource::Contextual,
-                                transcript_snippet: flushed.clone(),
-                                detected_at: now_ms(),
-                            };
-                            all_results.extend(merger.merge(vec![det], vec![]));
+                    tracing::info!(
+                        "[READING] Chapter change: {} {}", chapter_change.book_name, chapter_change.new_chapter
+                    );
+                    match bible_db.get_chapter(translation_id, chapter_change.book_number, chapter_change.new_chapter) {
+                        Ok(new_verses) => {
+                            let verses_data: Vec<(i32, String)> = new_verses
+                                .iter()
+                                .map(|v| (v.verse, v.text.clone()))
+                                .collect();
+                            reading_mode.start(
+                                chapter_change.book_number, &chapter_change.book_name, chapter_change.new_chapter, 1, verses_data,
+                            );
+                            if let Some(first) = new_verses.first() {
+                                let det = Detection {
+                                    verse_ref: VerseRef {
+                                        book_number: chapter_change.book_number,
+                                        book_name: chapter_change.book_name.clone(),
+                                        chapter: chapter_change.new_chapter,
+                                        verse_start: first.verse,
+                                        verse_end: None,
+                                    },
+                                    verse_id: None,
+                                    confidence: 1.0,
+                                    source: DetectionSource::Contextual,
+                                    transcript_snippet: flushed.clone(),
+                                    detected_at: now_ms(),
+                                };
+                                all_results.extend(merger.merge(vec![det], vec![]));
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("[READING] Failed to load new chapter: {e}");
                         }
                     }
                 }
