@@ -4,7 +4,6 @@ import { toast } from "sonner"
 import { useSettingsStore } from "@/stores/settings-store"
 import {
   useTutorialStore,
-  hydrateOnboardingState,
   persistOnboardingComplete,
 } from "@/stores/tutorial-store"
 import { TUTORIAL_STEPS } from "./tutorial-steps"
@@ -12,8 +11,8 @@ import { TutorialTooltip } from "./tutorial-tooltip"
 import { useTheme } from "@/components/theme-provider"
 
 export function TutorialOverlay() {
-  const [isHydrated, setIsHydrated] = useState(false)
   const isRunning = useTutorialStore((s) => s.isRunning)
+  const deepgramApiKey = useSettingsStore((s) => s.deepgramApiKey)
   const onboardingComplete = useSettingsStore((s) => s.onboardingComplete)
   const { theme } = useTheme()
 
@@ -37,20 +36,15 @@ export function TutorialOverlay() {
     [arrowColor]
   )
 
+  // Start tutorial only after API key is set and onboarding not yet complete
   useEffect(() => {
-    hydrateOnboardingState().then(() => {
-      setIsHydrated(true)
-    })
-  }, [])
-
-  useEffect(() => {
-    if (isHydrated && !onboardingComplete) {
-      const timer = setTimeout(() => {
-        useTutorialStore.getState().startTutorial()
-      }, 500)
-      return () => clearTimeout(timer)
-    }
-  }, [isHydrated, onboardingComplete])
+    if (!deepgramApiKey) return // API key modal is showing — wait
+    if (onboardingComplete) return // Already done
+    const timer = setTimeout(() => {
+      useTutorialStore.getState().startTutorial()
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [deepgramApiKey, onboardingComplete])
 
   const handleEvent = useCallback((data: EventData) => {
     if (data.status === STATUS.FINISHED || data.status === STATUS.SKIPPED) {
@@ -64,8 +58,6 @@ export function TutorialOverlay() {
       }
     }
   }, [])
-
-  if (!isHydrated) return null
 
   return (
     <Joyride
