@@ -21,13 +21,15 @@ export class OpenBeamSocket {
   connect(params?: Record<string, string>) {
     if (this.ws) this.disconnect()
     this.connectParams = params ?? null
-    const url = params
-      ? `${this.url}${this.url.includes("?") ? "&" : "?"}${new URLSearchParams(params).toString()}`
-      : this.url
 
-    this.ws = new WebSocket(url)
+    this.ws = new WebSocket(this.url)
 
-    this.ws.onopen = () => this.emit("_connected", {})
+    this.ws.onopen = () => {
+      if (params) {
+        this.ws!.send(JSON.stringify({ type: "auth", ...params }))
+      }
+      this.emit("_connected", {})
+    }
 
     this.ws.onclose = () => {
       this.emit("_disconnected", {})
