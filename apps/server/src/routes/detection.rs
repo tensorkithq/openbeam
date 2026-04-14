@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::state::AppState;
+use super::detection_shared::{format_verse_ref, source_label};
 
 #[derive(Deserialize)]
 pub struct DetectRequest {
@@ -57,24 +58,6 @@ pub struct DetectionStatus {
     pub has_direct: bool,
     pub has_semantic: bool,
     pub has_cloud: bool,
-}
-
-fn format_verse_ref(book_name: &str, chapter: i32, verse: i32, verse_end: Option<i32>) -> String {
-    match verse_end {
-        Some(end) if end != verse => format!("{book_name} {chapter}:{verse}-{end}"),
-        _ => format!("{book_name} {chapter}:{verse}"),
-    }
-}
-
-fn source_label(source: &openbeam_detection::DetectionSource) -> String {
-    match source {
-        openbeam_detection::DetectionSource::DirectReference => "direct".to_string(),
-        openbeam_detection::DetectionSource::Contextual => "contextual".to_string(),
-        openbeam_detection::DetectionSource::QuotationMatch { .. } => "quotation".to_string(),
-        openbeam_detection::DetectionSource::SemanticLocal { .. } => "semantic_local".to_string(),
-        openbeam_detection::DetectionSource::SemanticCloud { .. } => "semantic_cloud".to_string(),
-        other => format!("{other:?}"),
-    }
 }
 
 fn merged_to_result(m: &MergedDetection, bible_db: &openbeam_bible::BibleDb) -> DetectionResult {
