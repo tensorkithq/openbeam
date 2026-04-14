@@ -15,6 +15,7 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::state::AppState;
+use super::detection_shared::{format_verse_ref, source_label};
 
 #[derive(Deserialize)]
 struct WsIncoming {
@@ -53,24 +54,6 @@ pub async fn ws_handler(
 ) -> impl IntoResponse {
     let bible_db = state.bible_db.clone();
     ws.on_upgrade(move |socket| handle_socket(socket, state, bible_db))
-}
-
-fn format_verse_ref(book_name: &str, chapter: i32, verse: i32, verse_end: Option<i32>) -> String {
-    match verse_end {
-        Some(end) if end != verse => format!("{book_name} {chapter}:{verse}-{end}"),
-        _ => format!("{book_name} {chapter}:{verse}"),
-    }
-}
-
-fn source_label(source: &openbeam_detection::DetectionSource) -> String {
-    match source {
-        openbeam_detection::DetectionSource::DirectReference => "direct".to_string(),
-        openbeam_detection::DetectionSource::Contextual => "contextual".to_string(),
-        openbeam_detection::DetectionSource::QuotationMatch { .. } => "quotation".to_string(),
-        openbeam_detection::DetectionSource::SemanticLocal { .. } => "semantic_local".to_string(),
-        openbeam_detection::DetectionSource::SemanticCloud { .. } => "semantic_cloud".to_string(),
-        other => format!("{other:?}"),
-    }
 }
 
 fn now_ms() -> u64 {

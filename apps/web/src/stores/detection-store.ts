@@ -4,9 +4,7 @@ import type { DetectionResult } from "@/types"
 interface DetectionState {
   detections: DetectionResult[]
 
-  addDetection: (detection: DetectionResult) => void
   addDetections: (detections: DetectionResult[]) => void
-  setDetections: (detections: DetectionResult[]) => void
   removeDetection: (verseRef: string) => void
   clearDetections: () => void
 }
@@ -14,19 +12,6 @@ interface DetectionState {
 export const useDetectionStore = create<DetectionState>((set) => ({
   detections: [],
 
-  addDetection: (detection) =>
-    set((state) => {
-      const filtered = state.detections.filter(
-        (d) => d.verse_ref !== detection.verse_ref || d.confidence > detection.confidence,
-      )
-      if (filtered.length < state.detections.length) {
-        return { detections: [detection, ...filtered].slice(0, 50) }
-      }
-      if (state.detections.some((d) => d.verse_ref === detection.verse_ref)) {
-        return state
-      }
-      return { detections: [detection, ...state.detections].slice(0, 50) }
-    }),
   addDetections: (incoming) =>
     set((state) => {
       const map = new Map<string, DetectionResult>()
@@ -43,7 +28,6 @@ export const useDetectionStore = create<DetectionState>((set) => ({
       }
       return { detections: [...map.values()].slice(0, 50) }
     }),
-  setDetections: (detections) => set({ detections }),
   removeDetection: (verseRef) =>
     set((state) => ({
       detections: state.detections.filter((d) => d.verse_ref !== verseRef),
