@@ -1,27 +1,16 @@
 use axum::{
-    extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
-        Query,
-    },
+    extract::ws::{Message, WebSocket, WebSocketUpgrade},
     response::IntoResponse,
     Json,
 };
 use openbeam_stt::{DeepgramClient, SttConfig, TranscriptEvent, Word};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::{json, Value};
 use tokio::sync::mpsc;
 
-#[derive(Deserialize)]
-pub struct SttQuery {
-    key: String,
-}
-
-/// GET /ws/transcription?key=dg-xxx -- WebSocket upgrade for STT proxy.
-pub async fn ws_transcription(
-    ws: WebSocketUpgrade,
-    Query(params): Query<SttQuery>,
-) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_transcription(socket, params.key))
+/// GET /ws/transcription -- WebSocket upgrade for STT proxy.
+pub async fn ws_transcription(ws: WebSocketUpgrade) -> impl IntoResponse {
+    ws.on_upgrade(handle_transcription)
 }
 
 /// GET /api/transcription/status -- check if STT infrastructure is available.
@@ -30,16 +19,34 @@ pub async fn transcription_status() -> Json<Value> {
         "available": true,
         "provider": "deepgram",
         "mode": "byok",
-        "description": "Bring your own Deepgram API key via WebSocket query param"
+        "description": "Bring your own Deepgram API key via first WebSocket message"
     }))
 }
 
-async fn handle_transcription(mut socket: WebSocket, api_key: String) {
+async fn handle_transcription(mut socket: WebSocket) {
+    // The first message must be a JSON auth payload: {"type":"auth","key":"dg-xxx"}
+    let api_key = match socket.recv().await {
+        Some(Ok(Message::Text(text))) => {
+            match serde_json::from_str::<Value>(&text) {
+                Ok(msg)
+                    if msg.get("type").and_then(|v| v.as_str()) == Some("auth") =>
+                {
+                    msg.get("key")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string()
+                }
+                _ => String::new(),
+            }
+        }
+        _ => String::new(),
+    };
+
     if api_key.is_empty() {
-        tracing::warn!("STT proxy: empty API key, rejecting connection");
+        tracing::warn!("STT proxy: missing or invalid auth message, rejecting");
         let err = json!({
             "type": "stt:error",
-            "message": "API key is required"
+            "message": "First message must be {\"type\":\"auth\",\"key\":\"...\"}"
         });
         let _ = socket
             .send(Message::Text(serde_json::to_string(&err).unwrap().into()))
@@ -47,7 +54,7 @@ async fn handle_transcription(mut socket: WebSocket, api_key: String) {
         return;
     }
 
-    tracing::info!("STT proxy: new connection (key length={})", api_key.len());
+    tracing::info!("STT proxy: authenticated (key length={})", api_key.len());
 
     let config = SttConfig::new(api_key);
     let client = DeepgramClient::new(config);
