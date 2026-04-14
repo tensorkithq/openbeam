@@ -62,7 +62,7 @@ impl SessionRemoteMap {
             tracing::warn!(
                 "remote: invalid session ID rejected (len={}, id={:?})",
                 session_id.len(),
-                &session_id[..session_id.len().min(80)]
+                &session_id[..session_id.len().min(64)]
             );
             return Arc::new(RemoteSessionState::new());
         }
@@ -171,6 +171,13 @@ pub async fn start_osc(
     State(state): State<Arc<RemoteState>>,
     Json(body): Json<StartOscRequest>,
 ) -> impl IntoResponse {
+    if body.port < 1024 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "error": "port must be >= 1024" })),
+        );
+    }
+
     let mut osc_guard = state.osc.lock().await;
 
     // Stop existing listener if running
@@ -179,7 +186,7 @@ pub async fn start_osc(
     }
 
     let config = OscConfig {
-        port: body.port.clamp(1024, 65535),
+        port: body.port,
         host: "127.0.0.1".into(),
     };
 

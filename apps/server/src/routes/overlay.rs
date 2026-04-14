@@ -54,7 +54,7 @@ impl SessionRelayMap {
             tracing::warn!(
                 "overlay: invalid session ID rejected (len={}, id={:?})",
                 session_id.len(),
-                &session_id[..session_id.len().min(80)]
+                &session_id[..session_id.len().min(64)]
             );
             return Arc::new(BroadcastRelay::new());
         }
