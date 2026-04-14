@@ -127,6 +127,7 @@ export function initializeStreams(): () => void {
     transcriptFinals$: transcriptionStreams.finals$,
     socket: manager.detection,
     forwardSocket: manager.detection,
+    getTranslationId: () => useBibleStore.getState().activeTranslationId,
   })
 
   const remoteControlStreams = createRemoteControlStream({
