@@ -87,6 +87,10 @@ export function TutorialTooltip({
         <div className="flex items-center justify-end gap-1.5">
           <button
             {...skipProps}
+            onClick={(e) => {
+              e.preventDefault()
+              controls.skip("button_skip")
+            }}
             className="mr-auto rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Skip
