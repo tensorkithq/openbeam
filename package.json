@@ -6,9 +6,9 @@
     "dev:server": "cd apps/server && cargo run",
     "build": "pnpm --filter @openbeam/web build",
     "build:server": "cd apps/server && cargo build --release",
-    "lint": "pnpm --filter @openbeam/web lint",
-    "typecheck": "pnpm --filter @openbeam/web typecheck",
-    "test": "pnpm --filter @openbeam/web test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
     "test:e2e": "pnpm --filter @openbeam/web test:e2e"
   },
   "engines": {
