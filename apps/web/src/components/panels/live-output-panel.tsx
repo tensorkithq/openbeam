@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { PanelHeader } from "@/components/ui/panel-header"
 import { CanvasVerse } from "@/components/ui/canvas-verse"
 import { cn } from "@/lib/utils"
@@ -18,11 +18,10 @@ export function LiveOutputPanel() {
   const translation =
     translations.find((t) => t.id === activeTranslationId)?.abbreviation ?? "KJV"
 
-  const verseData = deriveLiveVerse({
-    isLive,
-    selectedVerse,
-    translation,
-  })
+  const verseData = useMemo(
+    () => deriveLiveVerse({ isLive, selectedVerse, translation }),
+    [isLive, selectedVerse, translation]
+  )
 
   useEffect(() => {
     useBroadcastStore.getState().setLiveVerse(verseData)
