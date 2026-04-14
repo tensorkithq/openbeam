@@ -149,8 +149,8 @@ pub async fn start_osc(
     }
 
     let config = OscConfig {
-        port: body.port,
-        host: "0.0.0.0".into(),
+        port: body.port.clamp(1024, 65535),
+        host: "127.0.0.1".into(),
     };
 
     // OSC is global — dispatch to the "default" session
