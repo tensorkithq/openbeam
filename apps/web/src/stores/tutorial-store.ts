@@ -13,17 +13,6 @@ export const useTutorialStore = create<TutorialState>((set) => ({
   stopTutorial: () => set({ isRunning: false }),
 }))
 
-// One-time migration: move standalone key into settings store
-try {
-  const legacy = localStorage.getItem("onboardingComplete")
-  if (legacy === "true") {
-    useSettingsStore.getState().setOnboardingComplete(true)
-    localStorage.removeItem("onboardingComplete")
-  }
-} catch {
-  // ignore
-}
-
 /** Mark onboarding complete in the single source of truth (settings store). */
 export function persistOnboardingComplete(): void {
   useSettingsStore.getState().setOnboardingComplete(true)
