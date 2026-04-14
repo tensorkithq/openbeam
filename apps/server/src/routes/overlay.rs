@@ -28,6 +28,16 @@ impl BroadcastRelay {
     }
 }
 
+const MAX_SESSIONS: usize = 500;
+
+fn is_valid_session_id(id: &str) -> bool {
+    id.len() <= 64
+        && !id.is_empty()
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-')
+}
+
 pub struct SessionRelayMap {
     relays: RwLock<HashMap<String, Arc<BroadcastRelay>>>,
 }
@@ -40,13 +50,33 @@ impl SessionRelayMap {
     }
 
     pub async fn get_or_create(&self, session_id: &str) -> Arc<BroadcastRelay> {
+        if !is_valid_session_id(session_id) {
+            tracing::warn!(
+                "overlay: invalid session ID rejected (len={}, id={:?})",
+                session_id.len(),
+                &session_id[..session_id.len().min(80)]
+            );
+            return Arc::new(BroadcastRelay::new());
+        }
+
         {
             let map = self.relays.read().await;
             if let Some(relay) = map.get(session_id) {
                 return relay.clone();
             }
         }
+
         let mut map = self.relays.write().await;
+        // Re-check after acquiring write lock
+        if let Some(relay) = map.get(session_id) {
+            return relay.clone();
+        }
+        if map.len() >= MAX_SESSIONS {
+            tracing::warn!(
+                "overlay: session map at capacity ({MAX_SESSIONS}), creating ephemeral relay for {session_id:?}"
+            );
+            return Arc::new(BroadcastRelay::new());
+        }
         map.entry(session_id.to_string())
             .or_insert_with(|| Arc::new(BroadcastRelay::new()))
             .clone()

@@ -35,6 +35,16 @@ impl RemoteSessionState {
     }
 }
 
+const MAX_SESSIONS: usize = 500;
+
+fn is_valid_session_id(id: &str) -> bool {
+    id.len() <= 64
+        && !id.is_empty()
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-')
+}
+
 /// Maps session IDs to per-session remote state.
 pub struct SessionRemoteMap {
     sessions: RwLock<HashMap<String, Arc<RemoteSessionState>>>,
@@ -48,13 +58,33 @@ impl SessionRemoteMap {
     }
 
     pub async fn get_or_create(&self, session_id: &str) -> Arc<RemoteSessionState> {
+        if !is_valid_session_id(session_id) {
+            tracing::warn!(
+                "remote: invalid session ID rejected (len={}, id={:?})",
+                session_id.len(),
+                &session_id[..session_id.len().min(80)]
+            );
+            return Arc::new(RemoteSessionState::new());
+        }
+
         {
             let map = self.sessions.read().await;
             if let Some(state) = map.get(session_id) {
                 return state.clone();
             }
         }
+
         let mut map = self.sessions.write().await;
+        // Re-check after acquiring write lock
+        if let Some(state) = map.get(session_id) {
+            return state.clone();
+        }
+        if map.len() >= MAX_SESSIONS {
+            tracing::warn!(
+                "remote: session map at capacity ({MAX_SESSIONS}), creating ephemeral state for {session_id:?}"
+            );
+            return Arc::new(RemoteSessionState::new());
+        }
         map.entry(session_id.to_string())
             .or_insert_with(|| Arc::new(RemoteSessionState::new()))
             .clone()
