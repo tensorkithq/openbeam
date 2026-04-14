@@ -13,28 +13,7 @@ export const useTutorialStore = create<TutorialState>((set) => ({
   stopTutorial: () => set({ isRunning: false }),
 }))
 
-// Replace tauri store with localStorage
-const getOnboardingComplete = () => localStorage.getItem("onboardingComplete") === "true"
-const setOnboardingComplete = (v: boolean) => localStorage.setItem("onboardingComplete", String(v))
-
-/** Load onboardingComplete from localStorage into settings store. */
-export async function hydrateOnboardingState(): Promise<void> {
-  try {
-    const completed = getOnboardingComplete()
-    if (completed) {
-      useSettingsStore.getState().setOnboardingComplete(true)
-    }
-  } catch {
-    console.warn("[tutorial] Failed to load persisted state, using defaults")
-  }
-}
-
-/** Write onboardingComplete=true to both Zustand and localStorage. */
-export async function persistOnboardingComplete(): Promise<void> {
+/** Mark onboarding complete in the single source of truth (settings store). */
+export function persistOnboardingComplete(): void {
   useSettingsStore.getState().setOnboardingComplete(true)
-  try {
-    setOnboardingComplete(true)
-  } catch {
-    console.warn("[tutorial] Failed to persist onboarding state")
-  }
 }

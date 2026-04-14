@@ -13,6 +13,8 @@ export interface DetectionStreamConfig {
   socket: SocketLike
   /** Socket to forward finals to (typically the same detection socket). Must support send(). */
   forwardSocket?: SendableSocketLike
+  /** Returns the active Bible translation ID to send with each detection request. */
+  getTranslationId?: () => number
 }
 
 export interface DetectionStreams {
@@ -34,7 +36,11 @@ export function createDetectionStream(
   if (forwardSocket) {
     forwardSub = transcriptFinals$.subscribe((segment) => {
       const msgType = segment.speech_final ? "transcript:speech_final" : "transcript:final"
-      forwardSocket.send(msgType, { text: segment.text })
+      const translationId = config.getTranslationId?.()
+      forwardSocket.send(msgType, {
+        text: segment.text,
+        ...(translationId != null && { translation_id: translationId }),
+      })
     })
   }
 
