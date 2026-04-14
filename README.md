@@ -8,7 +8,7 @@
 <p align="center">
   Real-time Bible verse detection for live sermons — in your browser.
   <br />
-  <a href="https://openbeam.tensorkit.net"><strong>Try it live</strong></a> &middot; <a href="https://github.com/openbezal/rhema">Rhema Desktop</a> &middot; <a href="#quick-start">Quick Start</a>
+  <a href="https://openbeam.tensorkit.ai"><strong>Try it live</strong></a> &middot; <a href="https://github.com/openbezal/rhema">Rhema Desktop</a> &middot; <a href="#quick-start">Quick Start</a>
 </p>
 
 ---
@@ -37,7 +37,7 @@ A compiled finite automaton that matches all 66 book names, their abbreviations,
 Handles fuzzy spoken formats: *"one nineteen verse one oh five"* resolves to Psalm 119:105.
 
 ### Semantic Search — Paraphrases and Allusions
-Embeds transcript segments via [Qwen3-Embedding-8B](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B) through OpenRouter, then searches a pre-built HNSW vector index of 31,000+ verse embeddings. This catches what pattern matching cannot — when a speaker alludes to a verse without naming it.
+Embeds transcript segments via [Qwen3-Embedding-8B](https://huggingface.co/Qwen/Qwen3-Embedding-8B) through OpenRouter, then searches a pre-built HNSW vector index of 31,000+ verse embeddings. This catches what pattern matching cannot — when a speaker alludes to a verse without naming it.
 
 *"Put on the full armor so you can stand against the enemy's schemes"* matches **Ephesians 6:11** even though no book or chapter was mentioned.
 
@@ -85,7 +85,7 @@ graph TB
 
 ### Hosted
 
-Visit [openbeam.tensorkit.net](https://openbeam.tensorkit.net), enter your [Deepgram API key](https://console.deepgram.com), and start transcribing.
+Visit [openbeam.tensorkit.ai](https://openbeam.tensorkit.ai), enter your [Deepgram API key](https://console.deepgram.com), and start transcribing.
 
 ### Self-Hosted
 
@@ -97,7 +97,7 @@ cd openbeam
 nix develop
 
 # Set your OpenRouter key for embeddings
-echo "OPENROUTER_API_KEY=sk-or-..." > .env
+echo "OPENROUTER_API_KEY=sk-or-..." > apps/server/.env
 
 # Launch both services
 start
@@ -134,7 +134,7 @@ Both services pick up their `railway.toml` configs automatically.
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `VITE_API_URL` | Yes | — | Server service URL (baked into the build) |
+| `VITE_API_URL` | Railway only | — | Server service URL (baked into the build; falls back to same-origin for local dev) |
 | `PORT` | No | 3000 | Static file server port (Railway sets this automatically) |
 
 Users provide their own Deepgram API key in the browser. It's stored in [`localStorage`](apps/web/src/stores/settings-store.ts#L3) — the server never persists it, only [passing it through](apps/server/src/routes/stt.rs#L15-L24) to Deepgram's WebSocket per-connection.
@@ -168,6 +168,7 @@ apps
 │       ├── stt          — Deepgram WebSocket client
 │       └── api          — OSC + HTTP remote control
 packages
+├── streams              — @openbeam/streams RxJS orchestration library
 └── overlay              — Broadcast overlay (standalone)
 ```
 
