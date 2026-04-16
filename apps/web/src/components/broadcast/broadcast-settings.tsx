@@ -49,6 +49,10 @@ export function BroadcastSettings({
     setMainThemeId(activeThemeId)
   }, [activeThemeId])
 
+  useEffect(() => {
+    setAltThemeId(altActiveThemeId)
+  }, [altActiveThemeId])
+
   const handleMainThemeChange = (id: string) => {
     setMainThemeId(id)
     useBroadcastStore.getState().setActiveTheme(id)

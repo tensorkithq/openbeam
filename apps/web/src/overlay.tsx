@@ -9,12 +9,14 @@ import type { BroadcastTheme, VerseRenderData } from "@/types/broadcast"
 interface BroadcastPayload {
   theme: BroadcastTheme
   verse: VerseRenderData | null
+  label?: string
 }
 
 const params = new URLSearchParams(window.location.search)
 const themeFilter = params.get("theme")
 const resolutionParam = params.get("resolution")
 const outputId = params.get("output") || "main"
+const expectLabel = outputId === "alt" ? "broadcast-alt" : "broadcast"
 
 let initWidth = 1920
 let initHeight = 1080
@@ -29,7 +31,9 @@ if (resolutionParam) {
 // Build WS URL with role=overlay and session scoping
 const role = params.get("role") || "overlay"
 const sessionId = params.get("session") || "default"
-const overlaySocket = new OpenBeamSocket(`/ws/overlay?role=${role}&session=${sessionId}`)
+const overlaySocket = new OpenBeamSocket(
+  `/ws/overlay?role=${role}&session=${sessionId}`
+)
 
 function BroadcastCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -63,24 +67,29 @@ function BroadcastCanvas() {
     }
   }, [])
 
-  const preloadBackgroundImage = useCallback((theme: BroadcastTheme) => {
-    const bg = theme.background
-    if (bg.type !== "image" || !bg.image?.url) return
+  const preloadBackgroundImage = useCallback(
+    (theme: BroadcastTheme) => {
+      const bg = theme.background
+      if (bg.type !== "image" || !bg.image?.url) return
 
-    const url = bg.image.url
-    const cache = imageCacheRef.current
-    if (cache.has(url)) return
+      const url = bg.image.url
+      const cache = imageCacheRef.current
+      if (cache.has(url)) return
 
-    const img = new Image()
-    img.onload = () => {
-      cache.set(url, img)
-      draw()
-    }
-    img.onerror = () => {
-      console.warn("[broadcast-output] failed to load background image", { url })
-    }
-    img.src = url
-  }, [draw])
+      const img = new Image()
+      img.onload = () => {
+        cache.set(url, img)
+        draw()
+      }
+      img.onerror = () => {
+        console.warn("[broadcast-output] failed to load background image", {
+          url,
+        })
+      }
+      img.src = url
+    },
+    [draw]
+  )
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -107,6 +116,7 @@ function BroadcastCanvas() {
 
     const offUpdate = overlaySocket.on("verse:update", (_, data) => {
       const payload = data as BroadcastPayload
+      if (payload.label && payload.label !== expectLabel) return
       if (themeFilter && payload.theme?.id !== themeFilter) return
       latestData.current = payload
       if (payload.theme) preloadBackgroundImage(payload.theme)
@@ -146,34 +156,39 @@ function BroadcastCanvas() {
         }}
       />
       {!connected && (
-        <div style={{
-          position: "fixed",
-          bottom: 24,
-          left: "50%",
-          transform: "translateX(-50%)",
-          color: "rgba(255,255,255,0.5)",
-          fontSize: 12,
-          fontFamily: "system-ui",
-        }}>
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            left: "50%",
+            transform: "translateX(-50%)",
+            color: "rgba(255,255,255,0.5)",
+            fontSize: 12,
+            fontFamily: "system-ui",
+          }}
+        >
           Waiting for connection...
         </div>
       )}
       {sessionId === "default" && (
-        <div style={{
-          position: "fixed",
-          top: 12,
-          left: "50%",
-          transform: "translateX(-50%)",
-          background: "rgba(234,179,8,0.9)",
-          color: "#000",
-          fontSize: 11,
-          fontFamily: "system-ui",
-          fontWeight: 600,
-          padding: "4px 12px",
-          pointerEvents: "none",
-          whiteSpace: "nowrap",
-        }}>
-          Shared channel — use your overlay URL from settings for a private session
+        <div
+          style={{
+            position: "fixed",
+            top: 12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "rgba(234,179,8,0.9)",
+            color: "#000",
+            fontSize: 11,
+            fontFamily: "system-ui",
+            fontWeight: 600,
+            padding: "4px 12px",
+            pointerEvents: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Shared channel — use your overlay URL from settings for a private
+          session
         </div>
       )}
     </>
