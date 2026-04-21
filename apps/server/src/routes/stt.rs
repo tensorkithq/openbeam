@@ -77,10 +77,10 @@ async fn handle_transcription(mut socket: WebSocket) {
             // Browser -> server: audio or control messages
             browser_msg = socket.recv() => {
                 match browser_msg {
-                    Some(Ok(Message::Binary(data))) => {
-                        if audio_tx.send(data.to_vec()).await.is_err() {
-                            break;
-                        }
+                    Some(Ok(Message::Binary(data)))
+                        if audio_tx.send(data.to_vec()).await.is_err() =>
+                    {
+                        break;
                     }
                     Some(Ok(Message::Text(text))) => {
                         if let Ok(parsed) = serde_json::from_str::<Value>(&text) {
