@@ -36,12 +36,12 @@ export function BroadcastSettings({
   const themes = useBroadcastStore((s) => s.themes)
   const activeThemeId = useBroadcastStore((s) => s.activeThemeId)
   const altActiveThemeId = useBroadcastStore((s) => s.altActiveThemeId)
+  const mainEnabled = useBroadcastStore((s) => s.mainEnabled)
+  const altEnabled = useBroadcastStore((s) => s.altEnabled)
 
-  const [mainEnabled, setMainEnabled] = useState(false)
   const [mainThemeId, setMainThemeId] = useState(activeThemeId)
   const [mainCopied, setMainCopied] = useState(false)
 
-  const [altEnabled, setAltEnabled] = useState(false)
   const [altThemeId, setAltThemeId] = useState(altActiveThemeId)
   const [altCopied, setAltCopied] = useState(false)
 
@@ -102,7 +102,10 @@ export function BroadcastSettings({
                 <span className={cn("text-xs", mainEnabled ? "text-foreground" : "text-muted-foreground")}>
                   {mainEnabled ? "On" : "Off"}
                 </span>
-                <Switch checked={mainEnabled} onCheckedChange={setMainEnabled} />
+                <Switch
+                  checked={mainEnabled}
+                  onCheckedChange={(v) => useBroadcastStore.getState().setMainEnabled(v)}
+                />
               </div>
             </div>
 
@@ -155,7 +158,10 @@ export function BroadcastSettings({
                 <span className={cn("text-xs", altEnabled ? "text-foreground" : "text-muted-foreground")}>
                   {altEnabled ? "On" : "Off"}
                 </span>
-                <Switch checked={altEnabled} onCheckedChange={setAltEnabled} />
+                <Switch
+                  checked={altEnabled}
+                  onCheckedChange={(v) => useBroadcastStore.getState().setAltEnabled(v)}
+                />
               </div>
             </div>
 

@@ -7,9 +7,10 @@ import { OpenBeamSocket } from "@/services/ws"
 import type { BroadcastTheme, VerseRenderData } from "@/types/broadcast"
 
 interface BroadcastPayload {
-  theme: BroadcastTheme
+  theme: BroadcastTheme | null
   verse: VerseRenderData | null
   label?: string
+  enabled?: boolean
 }
 
 const params = new URLSearchParams(window.location.search)
@@ -48,7 +49,7 @@ function BroadcastCanvas() {
     if (!ctx) return
 
     const data = latestData.current
-    if (!data) {
+    if (!data || data.enabled === false || !data.theme) {
       ctx.fillStyle = "#000"
       ctx.fillRect(0, 0, canvas.width, canvas.height)
       return

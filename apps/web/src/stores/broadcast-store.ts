@@ -6,7 +6,14 @@ import { getManager } from "@/streams/setup"
 const THEMES_KEY = "openbeam:themes"
 const BROADCAST_SETTINGS_KEY = "openbeam:broadcast-settings"
 
-function loadBroadcastSettings(): { activeThemeId?: string; altActiveThemeId?: string } {
+interface PersistedBroadcastSettings {
+  activeThemeId?: string
+  altActiveThemeId?: string
+  mainEnabled?: boolean
+  altEnabled?: boolean
+}
+
+function loadBroadcastSettings(): PersistedBroadcastSettings {
   try {
     const raw = localStorage.getItem(BROADCAST_SETTINGS_KEY)
     if (raw) return JSON.parse(raw)
@@ -16,15 +23,15 @@ function loadBroadcastSettings(): { activeThemeId?: string; altActiveThemeId?: s
   return {}
 }
 
-function persistBroadcastSettings(activeThemeId: string, altActiveThemeId: string) {
+function persistBroadcastSettings(settings: Required<PersistedBroadcastSettings>) {
   try {
-    localStorage.setItem(BROADCAST_SETTINGS_KEY, JSON.stringify({ activeThemeId, altActiveThemeId }))
+    localStorage.setItem(BROADCAST_SETTINGS_KEY, JSON.stringify(settings))
   } catch {
     // ignore storage errors
   }
 }
 
-function emitTo(label: string, _event: string, payload: unknown) {
+function emitTo(label: string, payload: unknown) {
   const mgr = getManager()
   if (!mgr) return
   mgr.overlay.send("verse:update", { label, ...(payload as Record<string, unknown>) })
@@ -63,6 +70,8 @@ interface BroadcastState {
   themes: BroadcastTheme[]
   activeThemeId: string
   altActiveThemeId: string
+  mainEnabled: boolean
+  altEnabled: boolean
   isLive: boolean
   liveVerse: VerseRenderData | null
 
@@ -79,6 +88,8 @@ interface BroadcastState {
   duplicateTheme: (id: string) => void
   setActiveTheme: (id: string) => void
   setAltActiveTheme: (id: string) => void
+  setMainEnabled: (enabled: boolean) => void
+  setAltEnabled: (enabled: boolean) => void
   setLive: (live: boolean) => void
   setLiveVerse: (verse: VerseRenderData | null) => void
   syncBroadcastOutput: () => void
@@ -131,6 +142,8 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
   themes: initialThemes,
   activeThemeId: savedBroadcast.activeThemeId ?? BUILTIN_THEMES[0].id,
   altActiveThemeId: savedBroadcast.altActiveThemeId ?? BUILTIN_THEMES[0].id,
+  mainEnabled: savedBroadcast.mainEnabled ?? true,
+  altEnabled: savedBroadcast.altEnabled ?? true,
   isLive: false,
   liveVerse: null,
   isDesignerOpen: false,
@@ -179,14 +192,17 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
   },
   syncBroadcastOutputFor: (outputId: string) => {
     const s = get()
+    const enabled = outputId === "alt" ? s.altEnabled : s.mainEnabled
+    if (!enabled) return
     const themeId = outputId === "alt" ? s.altActiveThemeId : s.activeThemeId
     const label = outputId === "alt" ? "broadcast-alt" : "broadcast"
     const theme = s.themes.find((t) => t.id === themeId) ?? s.themes[0]
     if (!theme) return
 
-    emitTo(label, "broadcast:verse-update", {
+    emitTo(label, {
       theme,
       verse: s.liveVerse,
+      enabled: true,
     })
   },
   syncBroadcastOutput: () => {
@@ -195,13 +211,55 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
   },
   setActiveTheme: (activeThemeId) => {
     set({ activeThemeId })
-    persistBroadcastSettings(activeThemeId, get().altActiveThemeId)
+    const s = get()
+    persistBroadcastSettings({
+      activeThemeId,
+      altActiveThemeId: s.altActiveThemeId,
+      mainEnabled: s.mainEnabled,
+      altEnabled: s.altEnabled,
+    })
     get().syncBroadcastOutputFor("main")
   },
   setAltActiveTheme: (altActiveThemeId) => {
     set({ altActiveThemeId })
-    persistBroadcastSettings(get().activeThemeId, altActiveThemeId)
+    const s = get()
+    persistBroadcastSettings({
+      activeThemeId: s.activeThemeId,
+      altActiveThemeId,
+      mainEnabled: s.mainEnabled,
+      altEnabled: s.altEnabled,
+    })
     get().syncBroadcastOutputFor("alt")
+  },
+  setMainEnabled: (mainEnabled) => {
+    set({ mainEnabled })
+    const s = get()
+    persistBroadcastSettings({
+      activeThemeId: s.activeThemeId,
+      altActiveThemeId: s.altActiveThemeId,
+      mainEnabled,
+      altEnabled: s.altEnabled,
+    })
+    if (mainEnabled) {
+      get().syncBroadcastOutputFor("main")
+    } else {
+      emitTo("broadcast", { theme: null, verse: null, enabled: false })
+    }
+  },
+  setAltEnabled: (altEnabled) => {
+    set({ altEnabled })
+    const s = get()
+    persistBroadcastSettings({
+      activeThemeId: s.activeThemeId,
+      altActiveThemeId: s.altActiveThemeId,
+      mainEnabled: s.mainEnabled,
+      altEnabled,
+    })
+    if (altEnabled) {
+      get().syncBroadcastOutputFor("alt")
+    } else {
+      emitTo("broadcast-alt", { theme: null, verse: null, enabled: false })
+    }
   },
   setLive: (isLive) => set({ isLive }),
   setLiveVerse: (liveVerse) => {
