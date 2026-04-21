@@ -2,6 +2,7 @@ import { create } from "zustand"
 import { createId } from "@paralleldrive/cuid2"
 
 const STORAGE_KEY = "openbeam:settings"
+const KEY_STORAGE_KEY = "openbeam:deepgram-key"
 
 interface SettingsState {
   sessionId: string
@@ -24,7 +25,22 @@ interface SettingsState {
   setOnboardingComplete: (complete: boolean) => void
 }
 
-function loadFromStorage(): Partial<SettingsState> {
+type PersistedSettings = Omit<
+  SettingsState,
+  | "deepgramApiKey"
+  | "setDeepgramApiKey"
+  | "setActiveTranslationId"
+  | "setAudioDeviceId"
+  | "setGain"
+  | "setAutoMode"
+  | "setConfidenceThreshold"
+  | "setCooldownMs"
+  | "setOnboardingComplete"
+>
+
+function loadSettingsFromStorage(): Partial<PersistedSettings> & {
+  deepgramApiKey?: string
+} {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) return JSON.parse(raw)
@@ -34,32 +50,68 @@ function loadFromStorage(): Partial<SettingsState> {
   return {}
 }
 
-function persistToStorage(state: SettingsState) {
+function loadDeepgramKey(): string | null {
   try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        sessionId: state.sessionId,
-        deepgramApiKey: state.deepgramApiKey,
-        activeTranslationId: state.activeTranslationId,
-        audioDeviceId: state.audioDeviceId,
-        gain: state.gain,
-        autoMode: state.autoMode,
-        confidenceThreshold: state.confidenceThreshold,
-        cooldownMs: state.cooldownMs,
-        onboardingComplete: state.onboardingComplete,
-      })
-    )
+    return sessionStorage.getItem(KEY_STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+function persistSettings(state: SettingsState) {
+  try {
+    const payload: PersistedSettings = {
+      sessionId: state.sessionId,
+      activeTranslationId: state.activeTranslationId,
+      audioDeviceId: state.audioDeviceId,
+      gain: state.gain,
+      autoMode: state.autoMode,
+      confidenceThreshold: state.confidenceThreshold,
+      cooldownMs: state.cooldownMs,
+      onboardingComplete: state.onboardingComplete,
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   } catch {
     // ignore storage errors
   }
 }
 
-const persisted = loadFromStorage()
+function persistDeepgramKey(key: string | null) {
+  try {
+    if (key) {
+      sessionStorage.setItem(KEY_STORAGE_KEY, key)
+    } else {
+      sessionStorage.removeItem(KEY_STORAGE_KEY)
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+const persisted = loadSettingsFromStorage()
+
+// Migrate any previously persisted key out of localStorage into sessionStorage,
+// then purge it from disk so cleartext copies aren't left behind.
+const migratedKey = typeof persisted.deepgramApiKey === "string"
+  ? persisted.deepgramApiKey
+  : null
+if (migratedKey) {
+  persistDeepgramKey(migratedKey)
+}
+if ("deepgramApiKey" in persisted) {
+  delete (persisted as { deepgramApiKey?: unknown }).deepgramApiKey
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted))
+  } catch {
+    // ignore storage errors
+  }
+}
+
+const initialDeepgramKey = loadDeepgramKey() ?? migratedKey
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   sessionId: persisted.sessionId ?? createId(),
-  deepgramApiKey: persisted.deepgramApiKey ?? null,
+  deepgramApiKey: initialDeepgramKey,
   activeTranslationId: persisted.activeTranslationId ?? 1,
   audioDeviceId: persisted.audioDeviceId ?? null,
   gain: persisted.gain ?? 1.0,
@@ -70,34 +122,34 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setDeepgramApiKey: (deepgramApiKey) => {
     set({ deepgramApiKey })
-    persistToStorage(get())
+    persistDeepgramKey(deepgramApiKey)
   },
   setActiveTranslationId: (activeTranslationId) => {
     set({ activeTranslationId })
-    persistToStorage(get())
+    persistSettings(get())
   },
   setAudioDeviceId: (audioDeviceId) => {
     set({ audioDeviceId })
-    persistToStorage(get())
+    persistSettings(get())
   },
   setGain: (gain) => {
     set({ gain })
-    persistToStorage(get())
+    persistSettings(get())
   },
   setAutoMode: (autoMode) => {
     set({ autoMode })
-    persistToStorage(get())
+    persistSettings(get())
   },
   setConfidenceThreshold: (confidenceThreshold) => {
     set({ confidenceThreshold })
-    persistToStorage(get())
+    persistSettings(get())
   },
   setCooldownMs: (cooldownMs) => {
     set({ cooldownMs })
-    persistToStorage(get())
+    persistSettings(get())
   },
   setOnboardingComplete: (onboardingComplete) => {
     set({ onboardingComplete })
-    persistToStorage(get())
+    persistSettings(get())
   },
 }))
