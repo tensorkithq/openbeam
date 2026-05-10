@@ -50,6 +50,19 @@ function loadSettingsFromStorage(): Partial<PersistedSettings> & {
   return {}
 }
 
+/**
+ * Read the Deepgram API key from `sessionStorage`.
+ *
+ * @security MITIGATION (not elimination) of CWE-312 (cleartext storage of
+ *   sensitive information). `sessionStorage` is still plaintext at rest while
+ *   the tab is open and remains reachable from any script running on this
+ *   origin (XSS, malicious extensions). The trade-off vs. `localStorage` is
+ *   lifetime: the key is wiped on tab close, bounding exposure to a working
+ *   session and avoiding long-lived disk persistence.
+ *
+ *   For stronger guarantees the next step is IndexedDB + Web Crypto with a
+ *   user passphrase — out of scope for this BYO-key UX.
+ */
 function loadDeepgramKey(): string | null {
   try {
     return sessionStorage.getItem(KEY_STORAGE_KEY)
@@ -76,6 +89,15 @@ function persistSettings(state: SettingsState) {
   }
 }
 
+/**
+ * Persist the Deepgram API key to `sessionStorage`.
+ *
+ * @security DO NOT change this to `localStorage`. CodeQL flags long-lived
+ *   plaintext credential storage (CWE-312). `sessionStorage` is the
+ *   intentional compromise: the key survives reloads within the tab so users
+ *   aren't re-prompted each refresh, but it never reaches disk and is cleared
+ *   on tab close.
+ */
 function persistDeepgramKey(key: string | null) {
   try {
     if (key) {
