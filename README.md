@@ -125,7 +125,7 @@ Both services pick up their `railway.toml` configs automatically.
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `OPENROUTER_API_KEY` | Yes | — | Qwen3 embedding API key (platform cost, ~$11/mo at 10K users) |
-| `PORT` | No | 4001 | Server port (Railway sets this automatically) |
+| `PORT` | No | 4001 | Server port. Railway does **not** set this; set it to the port your Railway domain targets (8080) or requests hang |
 | `DB_PATH` | No | ./data/openbeam.db | Bible database path |
 | `STATIC_DIR` | No | — | Path to built SPA files (for single-binary self-hosting) |
 | `RUST_LOG` | No | info | Log level |
