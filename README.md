@@ -129,6 +129,9 @@ Both services pick up their `railway.toml` configs automatically.
 | `DB_PATH` | No | ./data/openbeam.db | Bible database path |
 | `STATIC_DIR` | No | — | Path to built SPA files (for single-binary self-hosting) |
 | `RUST_LOG` | No | info | Log level |
+| `EMBEDDINGS_DIR` | No | data | Where the semantic index (`embeddings.bin`) lives; point at a persistent volume in production |
+| `EMBEDDINGS_URL` | No | — | If the index is missing there (e.g. a Git LFS pointer from a clone without LFS), download it from this URL at startup |
+| `EMBEDDINGS_SHA256` | No | — | Expected checksum of the downloaded index; mismatches are discarded |
 
 **Web** (`apps/web`)
 

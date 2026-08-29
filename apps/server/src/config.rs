@@ -7,6 +7,9 @@ pub struct Config {
     pub openrouter_embed_model: String,
     pub openrouter_embed_dim: usize,
     pub db_path: String,
+    pub embeddings_dir: String,
+    pub embeddings_url: Option<String>,
+    pub embeddings_sha256: Option<String>,
     pub log_level: String,
     pub static_dir: Option<String>,
 }
@@ -27,6 +30,12 @@ impl Config {
                 .and_then(|d| d.parse().ok())
                 .unwrap_or(4096),
             db_path: env::var("DB_PATH").unwrap_or_else(|_| "./data/openbeam.db".to_string()),
+            embeddings_dir: env::var("EMBEDDINGS_DIR").unwrap_or_else(|_| "data".to_string()),
+            embeddings_url: env::var("EMBEDDINGS_URL").ok().filter(|u| !u.is_empty()),
+            embeddings_sha256: env::var("EMBEDDINGS_SHA256")
+                .ok()
+                .map(|s| s.trim().to_ascii_lowercase())
+                .filter(|s| !s.is_empty()),
             log_level: env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()),
             static_dir: env::var("STATIC_DIR").ok(),
         }
@@ -39,6 +48,11 @@ impl Config {
             self.host, self.port
         );
         tracing::info!("  db: {}", self.db_path);
+        tracing::info!(
+            "  embeddings dir: {} (download: {})",
+            self.embeddings_dir,
+            self.embeddings_url.as_deref().unwrap_or("not configured")
+        );
         tracing::info!("  log_level: {}", self.log_level);
         tracing::info!(
             "  embeddings: {} (dim={})",
