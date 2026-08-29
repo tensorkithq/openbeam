@@ -1,4 +1,5 @@
 mod config;
+mod embeddings;
 mod routes;
 mod state;
 
@@ -60,38 +61,36 @@ async fn main() {
     // Build detection pipeline
     let mut pipeline = DetectionPipeline::new();
 
-    // Try to load HNSW vector index for semantic search
-    let embeddings_path = PathBuf::from("data/embeddings.bin");
-    let ids_path = PathBuf::from("data/embeddings-ids.bin");
-    if embeddings_path.exists() && ids_path.exists() {
-        match try_load_semantic(&embeddings_path, &ids_path) {
-            Some(detector) => {
-                tracing::info!("Semantic search enabled (vector index loaded)");
-                pipeline.set_semantic(detector);
-            }
-            None => {
-                tracing::info!("Semantic search disabled (vector index load failed)");
-            }
-        }
-    } else {
-        tracing::info!("Semantic search disabled (no vector index files)");
+    // Semantic search needs the vector index; fetch it if the build shipped
+    // without it (see embeddings.rs).
+    let index_files = embeddings::ensure_embeddings(&config).await;
+
+    let api_embedder = config
+        .openrouter_api_key
+        .as_deref()
+        .filter(|k| !k.is_empty())
+        .map(|k| (k.to_string(), config.openrouter_embed_model.clone(), config.openrouter_embed_dim));
+
+    if let Some((_, model, dimension)) = &api_embedder {
+        tracing::info!("API embedder configured: model={model}, dim={dimension}");
     }
 
-    // Try to configure API-based embedder from config
-    if let Some(ref api_key) = config.openrouter_api_key {
-        if !api_key.is_empty() {
-            let model = config.openrouter_embed_model.clone();
-            let dimension = config.openrouter_embed_dim;
-
-            tracing::info!("API embedder configured: model={model}, dim={dimension}");
-
-            // If we also have a vector index, wire up a real semantic detector
-            if embeddings_path.exists() && ids_path.exists() {
-                if let Some(detector) = try_load_semantic_with_api(&embeddings_path, &ids_path, api_key.clone(), model, dimension) {
-                    pipeline.set_semantic(detector);
-                    tracing::info!("Semantic search enabled with API embedder");
-                }
+    if let Some(files) = index_files {
+        let detector = match &api_embedder {
+            Some((api_key, model, dimension)) => {
+                try_load_semantic_with_api(&files.embeddings, &files.ids, api_key.clone(), model.clone(), *dimension)
             }
+            None => try_load_semantic(&files.embeddings, &files.ids),
+        };
+        match detector {
+            Some(detector) => {
+                tracing::info!(
+                    "Semantic search enabled ({} embedder)",
+                    if api_embedder.is_some() { "API" } else { "stub" }
+                );
+                pipeline.set_semantic(detector);
+            }
+            None => tracing::warn!("Semantic search disabled (vector index load failed)"),
         }
     }
 

@@ -1,0 +1,21 @@
+name: Uptime
+
+# The production API went dark for weeks without anyone noticing because the
+# hosting dashboard still showed the service as "Online". This probes the
+# public health endpoint the way a browser would and fails loudly if it does
+# not answer, so GitHub notifies on the failed run.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  api-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: GET /api/health
+        run: |
+          body=$(curl -fsS --max-time 15 https://openbeamserver.tensorkit.ai/api/health)
+          echo "$body"
+          echo "$body" | grep -q '"status":"ok"'
