@@ -86,6 +86,8 @@ interface BroadcastState {
   saveTheme: (theme: BroadcastTheme) => void
   deleteTheme: (id: string) => void
   duplicateTheme: (id: string) => void
+  renameTheme: (id: string, name: string) => void
+  importTheme: (theme: BroadcastTheme) => BroadcastTheme
   setActiveTheme: (id: string) => void
   setAltActiveTheme: (id: string) => void
   setMainEnabled: (enabled: boolean) => void
@@ -165,11 +167,52 @@ export const useBroadcastStore = create<BroadcastState>((set, get) => ({
     })
   },
   deleteTheme: (id) => {
+    const before = get()
+    const target = before.themes.find((t) => t.id === id)
+    if (!target || target.builtin) return
+
+    const themes = before.themes.filter((t) => t.id !== id)
+    persistThemes(themes)
+    set({ themes })
+
+    // Anything still pointing at the deleted theme falls back to the default.
+    const fallback = BUILTIN_THEMES[0].id
+    if (before.activeThemeId === id) get().setActiveTheme(fallback)
+    if (before.altActiveThemeId === id) get().setAltActiveTheme(fallback)
+    if (before.editingThemeId === id) {
+      set({ editingThemeId: null, draftTheme: null, selectedElement: null })
+    }
+  },
+  renameTheme: (id, name) => {
+    const trimmed = name.trim()
+    if (!trimmed) return
     set((s) => {
-      const themes = s.themes.filter((t) => t.id !== id || t.builtin)
+      const target = s.themes.find((t) => t.id === id)
+      if (!target || target.builtin) return {}
+      const themes = s.themes.map((t) =>
+        t.id === id ? { ...t, name: trimmed, updatedAt: Date.now() } : t
+      )
+      persistThemes(themes)
+      const draftTheme =
+        s.editingThemeId === id && s.draftTheme ? { ...s.draftTheme, name: trimmed } : s.draftTheme
+      return { themes, draftTheme }
+    })
+  },
+  importTheme: (theme) => {
+    const imported: BroadcastTheme = {
+      ...theme,
+      id: crypto.randomUUID(),
+      builtin: false,
+      pinned: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+    set((s) => {
+      const themes = [...s.themes, imported]
       persistThemes(themes)
       return { themes }
     })
+    return imported
   },
   duplicateTheme: (id) => {
     const s = get()
