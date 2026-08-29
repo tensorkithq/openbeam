@@ -59,8 +59,10 @@ impl HnswVectorIndex {
 
         // Safe transmute: f32 has no invalid bit patterns and we verified alignment
         let embeddings: Vec<f32> = emb_bytes
-            .chunks_exact(std::mem::size_of::<f32>())
-            .map(|chunk| f32::from_ne_bytes(chunk.try_into().unwrap()))
+            .as_chunks::<{ std::mem::size_of::<f32>() }>()
+            .0
+            .iter()
+            .map(|chunk| f32::from_ne_bytes(*chunk))
             .collect();
 
         let num_vectors = embeddings.len() / dim;
@@ -84,8 +86,10 @@ impl HnswVectorIndex {
         }
 
         let verse_ids: Vec<i64> = ids_bytes
-            .chunks_exact(std::mem::size_of::<i64>())
-            .map(|chunk| i64::from_ne_bytes(chunk.try_into().unwrap()))
+            .as_chunks::<{ std::mem::size_of::<i64>() }>()
+            .0
+            .iter()
+            .map(|chunk| i64::from_ne_bytes(*chunk))
             .collect();
 
         if verse_ids.len() != num_vectors {
