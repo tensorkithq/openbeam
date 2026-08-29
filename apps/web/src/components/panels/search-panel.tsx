@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/tooltip"
 import { bibleActions } from "@/hooks/use-bible"
 import { useBibleStore, useQueueStore } from "@/stores"
+import { useBackendStore } from "@/stores/backend-store"
 import type { Book, Verse } from "@/types"
 import { Input } from "@/components/ui/input"
 import { searchContextWithFuse, prefetchFuseIndex } from "@/lib/context-search"
@@ -145,6 +146,7 @@ export function SearchPanel() {
   const books = useBibleStore((s) => s.books)
   const currentChapter = useBibleStore((s) => s.currentChapter)
   const semanticResults = useBibleStore((s) => s.semanticResults)
+  const semanticAvailable = useBackendStore((s) => s.capabilities?.detection.semantic ?? true)
   const activeTranslationId = useBibleStore((s) => s.activeTranslationId)
   const selectedVerse = useBibleStore((s) => s.selectedVerse)
 
@@ -610,12 +612,18 @@ export function SearchPanel() {
       {activeTab === "context" && (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex flex-col gap-0 p-2">
-            {contextQuery.length < 5 && (
+            {!semanticAvailable && (
+              <p className="p-4 text-center text-xs text-muted-foreground">
+                Context search is unavailable — this server has no semantic index loaded.
+                Verses will still be detected by reference and quotation.
+              </p>
+            )}
+            {semanticAvailable && contextQuery.length < 5 && (
               <p className="p-4 text-center text-xs text-muted-foreground">
                 Search by meaning — type a phrase, paraphrase, or topic...
               </p>
             )}
-            {contextQuery.length >= 5 && semanticResults.length === 0 && (
+            {semanticAvailable && contextQuery.length >= 5 && semanticResults.length === 0 && (
               <p className="p-4 text-center text-xs text-muted-foreground">
                 No results found
               </p>

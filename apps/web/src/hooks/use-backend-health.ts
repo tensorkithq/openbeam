@@ -1,5 +1,7 @@
 import { useEffect } from "react"
 import { toast } from "sonner"
+import { useBackendStore } from "@/stores/backend-store"
+import type { HealthResponse } from "@/services/api"
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ""
 const TOAST_ID = "backend-unreachable"
@@ -9,7 +11,7 @@ const REQUEST_TIMEOUT_MS = 5_000
 
 // A hung backend never rejects a plain fetch, so every probe carries its own
 // deadline. Anything other than a 2xx inside the deadline counts as down.
-async function probeHealth(): Promise<boolean> {
+async function probeHealth(): Promise<HealthResponse | null> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   try {
@@ -17,17 +19,18 @@ async function probeHealth(): Promise<boolean> {
       signal: controller.signal,
       cache: "no-store",
     })
-    return res.ok
+    if (!res.ok) return null
+    return (await res.json()) as HealthResponse
   } catch {
-    return false
+    return null
   } finally {
     clearTimeout(timer)
   }
 }
 
 /**
- * Polls the API server and keeps a persistent toast up while it is
- * unreachable. Without this, an outage looks like an app with no data:
+ * Polls the API server, records its capabilities, and keeps a persistent
+ * toast up while it is unreachable. Without this, an outage looks like an app with no data:
  * empty translation list, empty search, a transcript that never fills.
  */
 export function useBackendHealth() {
@@ -37,8 +40,10 @@ export function useBackendHealth() {
     let wasDown = false
 
     const tick = async () => {
-      const up = await probeHealth()
+      const health = await probeHealth()
       if (cancelled) return
+      useBackendStore.getState().setHealth(health)
+      const up = health !== null
 
       if (!up) {
         toast.error("Can't reach the OpenBeam server", {

@@ -11,6 +11,18 @@ export interface StatusSnapshot {
   confidence_threshold: number
 }
 
+export interface HealthResponse {
+  status: string
+  service: string
+  version: string
+  capabilities: {
+    bible: boolean
+    detection: { direct: boolean; semantic: boolean; quotation: boolean }
+    stt: boolean
+    overlay: boolean
+  }
+}
+
 export interface RemoteCommand {
   command: string
   value?: unknown
@@ -111,8 +123,7 @@ export const api = {
     post("/api/v1/control", cmd),
 
   // Health
-  health: (): Promise<{ status: string; service: string; version: string }> =>
-    get("/api/health"),
+  health: (): Promise<HealthResponse> => get("/api/health"),
 }
 
 async function get<T>(path: string): Promise<T> {
