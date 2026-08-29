@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { act } from "react"
 import { createRoot, type Root } from "react-dom/client"
 import { useBackendHealth } from "../use-backend-health"
+import { useBackendStore } from "@/stores/backend-store"
 
 vi.mock("sonner", () => ({
   toast: {
@@ -22,6 +23,13 @@ function Probe() {
 let root: Root
 let container: HTMLDivElement
 const fetchMock = vi.fn()
+const healthy = {
+  status: "ok",
+  service: "openbeam",
+  version: "test",
+  capabilities: { bible: true, detection: { direct: true, semantic: false, quotation: true }, stt: true, overlay: true },
+}
+const okResponse = () => ({ ok: true, json: async () => healthy })
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -57,6 +65,7 @@ describe("useBackendHealth", () => {
     await flush()
 
     expect(toast.error).toHaveBeenCalledTimes(1)
+    expect(useBackendStore.getState().reachable).toBe(false)
     expect(toast.error).toHaveBeenCalledWith(
       "Can't reach the OpenBeam server",
       expect.objectContaining({ id: "backend-unreachable", duration: Infinity }),
@@ -70,12 +79,14 @@ describe("useBackendHealth", () => {
     expect(toast.error).toHaveBeenCalledTimes(1)
   })
 
-  it("stays quiet while healthy", async () => {
-    fetchMock.mockResolvedValue({ ok: true })
+  it("stays quiet while healthy and records capabilities", async () => {
+    fetchMock.mockResolvedValue(okResponse())
     await mount()
     await flush()
     expect(toast.error).not.toHaveBeenCalled()
     expect(toast.success).not.toHaveBeenCalled()
+    expect(useBackendStore.getState().reachable).toBe(true)
+    expect(useBackendStore.getState().capabilities?.detection.semantic).toBe(false)
   })
 
   it("gives up on a hung server after the request deadline", async () => {
@@ -98,7 +109,7 @@ describe("useBackendHealth", () => {
 
   it("announces recovery once and retries faster while down", async () => {
     fetchMock.mockRejectedValueOnce(new TypeError("down"))
-    fetchMock.mockResolvedValue({ ok: true })
+    fetchMock.mockResolvedValue(okResponse())
     await mount()
     await flush()
     expect(toast.error).toHaveBeenCalledTimes(1)
